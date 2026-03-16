@@ -76,6 +76,57 @@ router.get('/queue/info', async (_req: AuthRequest, res: Response) => {
   }
 });
 
+// GET /api/orders/queue/all — get all orders in queue (for display/admin)
+router.get('/queue/all', async (_req: AuthRequest, res: Response) => {
+  try {
+    const allOrders = await Order.find({
+      status: { $in: ['pending', 'preparing', 'ready'] }
+    })
+      .sort({ queueNumber: 1 })
+      .select('queueNumber status estimatedTime createdAt items totalPrice');
+
+    res.json(allOrders);
+  } catch (err) {
+    console.error('Queue all error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// GET /api/orders/queue/position — get user's position in queue
+router.get('/queue/position', async (req: AuthRequest, res: Response) => {
+  try {
+    const userOrder = await Order.findOne({
+      userId: req.userId,
+      status: { $in: ['pending', 'preparing', 'ready'] }
+    });
+
+    if (!userOrder) {
+      res.json({ position: null, queueNumber: null, ordersAhead: 0 });
+      return;
+    }
+
+    const ordersAhead = await Order.countDocuments({
+      queueNumber: { $lt: userOrder.queueNumber },
+      status: { $in: ['pending', 'preparing', 'ready'] }
+    });
+
+    const totalInQueue = await Order.countDocuments({
+      status: { $in: ['pending', 'preparing', 'ready'] }
+    });
+
+    res.json({
+      queueNumber: userOrder.queueNumber,
+      position: ordersAhead + 1,
+      totalInQueue,
+      status: userOrder.status,
+      estimatedTime: userOrder.estimatedTime
+    });
+  } catch (err) {
+    console.error('Queue position error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // GET /api/orders/:id — get a specific order
 router.get('/:id', async (req: AuthRequest, res: Response) => {
   try {

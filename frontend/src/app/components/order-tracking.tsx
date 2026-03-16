@@ -1,8 +1,9 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/app/components/ui/card';
 import { Badge } from '@/app/components/ui/badge';
 import { Progress } from '@/app/components/ui/progress';
-import { CheckCircle2, Clock, CookingPot, Package } from 'lucide-react';
+import { CheckCircle2, Clock, CookingPot, Package, X } from 'lucide-react';
 import { Button } from '@/app/components/ui/button';
+import { useState } from 'react';
 
 export interface Order {
   id: string;
@@ -20,7 +21,9 @@ interface OrderTrackingProps {
 }
 
 export function OrderTracking({ order, onNewOrder }: OrderTrackingProps) {
-  if (!order) {
+  const [isVisible, setIsVisible] = useState(true);
+
+  if (!order || !isVisible) {
     return null;
   }
 
@@ -62,7 +65,13 @@ export function OrderTracking({ order, onNewOrder }: OrderTrackingProps) {
 
   return (
     <div className="fixed inset-0 bg-background/95 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <Card className="w-full max-w-md">
+      <Card className="w-full max-w-md relative">
+        <button
+          onClick={() => setIsVisible(false)}
+          className="absolute top-4 right-4 p-1 hover:bg-muted rounded-lg transition-colors"
+        >
+          <X className="w-5 h-5 text-muted-foreground hover:text-foreground" />
+        </button>
         <CardHeader className="text-center">
           <div className="mx-auto mb-4 w-16 h-16 rounded-full bg-secondary flex items-center justify-center">
             <StatusIcon className="w-8 h-8 text-primary" />
@@ -123,9 +132,18 @@ export function OrderTracking({ order, onNewOrder }: OrderTrackingProps) {
           )}
 
           {order.status !== 'completed' && (
-            <p className="text-xs text-center text-muted-foreground">
-              We'll update you as your order progresses
-            </p>
+            <div className="space-y-3">
+              <p className="text-xs text-center text-muted-foreground">
+                We'll update you as your order progresses
+              </p>
+              <Button 
+                onClick={() => setIsVisible(false)} 
+                variant="outline" 
+                className="w-full"
+              >
+                Close Tracking
+              </Button>
+            </div>
           )}
         </CardContent>
       </Card>

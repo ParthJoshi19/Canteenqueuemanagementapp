@@ -8,6 +8,7 @@ import { AdminDashboard } from '@/app/components/admin-dashboard';
 import { MenuCard } from '@/app/components/menu-card';
 import { Cart } from '@/app/components/cart';
 import { OrderTracking, Order } from '@/app/components/order-tracking';
+import { QueueDisplay } from '@/app/components/queue-display';
 import { Header } from '@/app/components/header';
 import { toast } from 'sonner';
 import { Toaster } from '@/app/components/ui/sonner';
@@ -58,6 +59,7 @@ export default function App() {
   const [backendMenuItems, setBackendMenuItems] = useState<MenuItem[]>([]);
   const [menuLoading, setMenuLoading] = useState(true);
   const [queueInfo, setQueueInfo] = useState({ currentQueue: 0, averageWaitTime: 0 });
+  const [showQueueDisplay, setShowQueueDisplay] = useState(false);
 
   // Fetch menu items from backend
   const fetchMenu = useCallback(async () => {
@@ -339,35 +341,65 @@ export default function App() {
       />
 
       <main className="container mx-auto px-4 py-8">
-        {menuLoading ? (
-          <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-          </div>
-        ) : (
+        {!showQueueDisplay ? (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredItems.map(item => (
-                <MenuCard
-                  key={item.id}
-                  item={item}
-                  onAddToCart={handleAddToCart}
-                />
-              ))}
+            <div className="flex justify-end mb-6">
+              <button
+                onClick={() => setShowQueueDisplay(true)}
+                className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-sm font-medium"
+              >
+                📊 View Queue ({queueInfo.currentQueue})
+              </button>
             </div>
 
-            {filteredItems.length === 0 && (
-              <div className="text-center py-12">
-                <p className="text-muted-foreground">No items found in this category</p>
+            {menuLoading ? (
+              <div className="flex justify-center py-12">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
               </div>
+            ) : (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                  {filteredItems.map(item => (
+                    <MenuCard
+                      key={item.id}
+                      item={item}
+                      onAddToCart={handleAddToCart}
+                    />
+                  ))}
+                </div>
+
+                {filteredItems.length === 0 && (
+                  <div className="text-center py-12">
+                    <p className="text-muted-foreground">No items found in this category</p>
+                  </div>
+                )}
+              </>
             )}
           </>
+        ) : (
+          <div className="space-y-4">
+            <button
+              onClick={() => setShowQueueDisplay(false)}
+              className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-sm font-medium"
+            >
+              ← Back to Menu
+            </button>
+            <QueueDisplay refreshInterval={4000} />
+          </div>
         )}
       </main>
 
       <Cart
         items={cartItems}
         onRemoveItem={handleRemoveItem}
-        onPlaceOrder={handlePlaceOrder}
+        onPlaceOrder={(confirmation) => {
+          // Refresh queue info when order is placed
+          fetchQueueInfo();
+        }}
+        onOrderConfirmed={() => {
+          // Fetch active order after user confirms they're done
+          // fetchActiveOrder();
+        }}
         onClearCart={handleClearCart}
       />
 
