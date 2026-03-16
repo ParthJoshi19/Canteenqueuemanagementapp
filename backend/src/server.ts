@@ -1,12 +1,12 @@
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-import { connectDB } from './config/db.js';
-import authRoutes from './routes/auth.js';
-import menuRoutes from './routes/menu.js';
-import orderRoutes from './routes/orders.js';
-import profileRoutes from './routes/profile.js';
-import adminRoutes from './routes/admin.js';
+import { connectDB } from './config/db';
+import authRoutes from './routes/auth';
+import menuRoutes from './routes/menu';
+import orderRoutes from './routes/orders';
+import profileRoutes from './routes/profile';
+import adminRoutes from './routes/admin';
 import dotenv from 'dotenv';
 dotenv.config();
 const app = express();

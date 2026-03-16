@@ -1,5 +1,5 @@
-import { connectDB } from '../config/db.js';
-import { User } from '../models/User.js';
+import { connectDB } from '../config/db';
+import { User } from '../models/User';
 import dotenv from 'dotenv';
 dotenv.config();
 async function seedAdmin() {

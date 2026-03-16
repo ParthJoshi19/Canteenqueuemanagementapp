@@ -1,8 +1,8 @@
 import { Router, Response } from 'express';
 import multer from 'multer';
-import { User } from '../models/User.js';
-import { AuthRequest, authenticate } from '../middleware/auth.js';
-import { uploadToS3, deleteFromS3 } from '../config/s3.js';
+import { User } from '../models/User';
+import { AuthRequest, authenticate } from '../middleware/auth';
+import { uploadToS3, deleteFromS3 } from '../config/s3';
 
 const router = Router();
 

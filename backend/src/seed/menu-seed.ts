@@ -1,5 +1,5 @@
-import { connectDB } from '../config/db.js';
-import { MenuItem } from '../models/MenuItem.js';
+import { connectDB } from '../config/db';
+import { MenuItem } from '../models/MenuItem';
 import dotenv from 'dotenv';
 dotenv.config();
 const menuItems = [

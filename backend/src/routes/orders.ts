@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
-import { Order } from '../models/Order.js';
-import { getNextQueueNumber } from '../models/Counter.js';
-import { AuthRequest, authenticate } from '../middleware/auth.js';
+import { Order } from '../models/Order';
+import { getNextQueueNumber } from '../models/Counter';
+import { AuthRequest, authenticate } from '../middleware/auth';
 
 const router = Router();
 
