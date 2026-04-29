@@ -62,7 +62,7 @@ export async function createUser(input: {
 }): Promise<IUser> {
   const passwordHash = await bcrypt.hash(input.password, 12);
   const result = await query<UserRow>(
-    `INSERT INTO users (username, password, role, display_name, profile_completed)
+    `INSERT INTO users (username, password_hash, role, display_name, profile_completed)
      VALUES ($1, $2, $3, $4, $5)
      RETURNING
       id AS "_id",
