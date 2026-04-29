@@ -1,7 +1,7 @@
-import bcrypt from 'bcrypt';
-import { query } from '../config/db.js';
+import bcrypt from "bcrypt";
+import { query } from "../config/db.js";
 
-export type UserRole = 'user' | 'admin';
+export type UserRole = "user" | "admin";
 
 export interface IUser {
   _id: string;
@@ -49,7 +49,7 @@ function toUser(row: UserRow): IUser {
 function toUserWithPassword(row: UserRow): IUserWithPassword {
   return {
     ...toUser(row),
-    passwordHash: row.passwordHash ?? '',
+    passwordHash: row.passwordHash ?? "",
   };
 }
 
@@ -62,23 +62,23 @@ export async function createUser(input: {
 }): Promise<IUser> {
   const passwordHash = await bcrypt.hash(input.password, 12);
   const result = await query<UserRow>(
-    `INSERT INTO users (username, password_hash, role, display_name, profile_completed)
-     VALUES ($1, $2, $3, $4, $5)
-     RETURNING
-      id AS "_id",
-      id,
-      username,
-      display_name AS "displayName",
-      bio,
-      profile_picture AS "profilePicture",
-      profile_completed AS "profileCompleted",
-      role,
-      created_at AS "createdAt"`,
+    `INSERT INTO users (id, username, password_hash, role, display_name, profile_completed)
+   VALUES (DEFAULT, $1, $2, $3, $4, $5)
+   RETURNING
+    id AS "_id",
+    id,
+    username,
+    display_name AS "displayName",
+    bio,
+    profile_picture AS "profilePicture",
+    profile_completed AS "profileCompleted",
+    role,
+    created_at AS "createdAt"`,
     [
       input.username.trim(),
       passwordHash,
-      input.role ?? 'user',
-      input.displayName ?? '',
+      input.role ?? "user",
+      input.displayName ?? "",
       input.profileCompleted ?? false,
     ],
   );
@@ -104,7 +104,7 @@ export async function findUserByUsername(
       role,
       created_at AS "createdAt"
      FROM users
-     WHERE username = $1 ${hasRole ? 'AND role = $2' : ''}
+     WHERE username = $1 ${hasRole ? "AND role = $2" : ""}
      LIMIT 1`,
     hasRole ? [username.trim(), role] : [username.trim()],
   );
@@ -135,7 +135,10 @@ export async function findUserById(id: string): Promise<IUser | null> {
   return toUser(result.rows[0]);
 }
 
-export async function verifyPassword(user: IUserWithPassword, candidate: string): Promise<boolean> {
+export async function verifyPassword(
+  user: IUserWithPassword,
+  candidate: string,
+): Promise<boolean> {
   return bcrypt.compare(candidate, user.passwordHash);
 }
 
@@ -160,14 +163,22 @@ export async function updateUserProfile(
       profile_completed AS "profileCompleted",
       role,
       created_at AS "createdAt"`,
-    [id, update.displayName ?? null, update.bio ?? null, update.profileCompleted ?? null],
+    [
+      id,
+      update.displayName ?? null,
+      update.bio ?? null,
+      update.profileCompleted ?? null,
+    ],
   );
 
   if (result.rows.length === 0) return null;
   return toUser(result.rows[0]);
 }
 
-export async function updateUserProfilePicture(id: string, profilePicture: string): Promise<IUser | null> {
+export async function updateUserProfilePicture(
+  id: string,
+  profilePicture: string,
+): Promise<IUser | null> {
   const result = await query<UserRow>(
     `UPDATE users
      SET profile_picture = $2
