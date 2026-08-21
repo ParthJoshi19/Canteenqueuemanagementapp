@@ -77,7 +77,7 @@ export async function createUser(input: {
     [
       input.username.trim(),
       passwordHash,
-      input.role ?? "user",wwwww
+      input.role ?? "user",
       input.displayName ?? "",
       input.profileCompleted ?? false,
     ],

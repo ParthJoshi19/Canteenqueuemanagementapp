@@ -1,0 +1,13 @@
+.env
+.env.*
+!.env.example
+
+*.pem
+
+node_modules/
+dist/
+
+.terraform/
+terraform.tfstate
+terraform.tfstate.*
+

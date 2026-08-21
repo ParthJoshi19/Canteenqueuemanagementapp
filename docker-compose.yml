@@ -1,0 +1,33 @@
+services:
+
+  backend:
+    build:
+      context: .
+      dockerfile: backend/Dockerfile
+    container_name: canteen-backend
+    restart: unless-stopped
+
+    environment:
+      NODE_ENV: production
+      PORT: 5000
+      DATABASE_URL: ${DATABASE_URL}
+
+    expose:
+      - "5000"
+
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+
+      args:
+        VITE_API_BASE_URL: /
+
+    container_name: canteen-frontend
+    restart: unless-stopped
+
+    ports:
+      - "80:80"
+
+    depends_on:
+      - backend
