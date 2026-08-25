@@ -21,7 +21,7 @@ services:
       dockerfile: frontend/Dockerfile
 
       args:
-        VITE_API_BASE_URL: /
+        VITE_API_BASE_URL: http://15.207.89.23
 
     container_name: canteen-frontend
     restart: unless-stopped
