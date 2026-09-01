@@ -10,6 +10,8 @@ import {
   findOrdersByUser,
   findUserActiveOrder,
   updateOrderStatus,
+  PaymentMethod,
+  PaymentStatus,
 } from '../models/Order.js';
 import { getNextQueueNumber } from '../models/Counter.js';
 import { AuthRequest, authenticate } from '../middleware/auth.js';
@@ -22,10 +24,13 @@ router.use(authenticate);
 // POST /api/orders — place a new order
 router.post('/', async (req: AuthRequest, res: Response) => {
   try {
-    const { items, totalPrice, estimatedTime } = req.body as {
+    const { items, totalPrice, estimatedTime, paymentStatus, paymentMethod, paymentIntentId } = req.body as {
       items?: string[];
       totalPrice?: number;
       estimatedTime?: number;
+      paymentStatus?: PaymentStatus;
+      paymentMethod?: PaymentMethod;
+      paymentIntentId?: string;
     };
 
     if (!items || !Array.isArray(items) || items.length === 0) {
@@ -50,7 +55,23 @@ router.post('/', async (req: AuthRequest, res: Response) => {
       totalPrice,
       estimatedTime,
       status: 'pending',
+      paymentStatus: paymentStatus ?? 'unpaid',
+      paymentMethod: paymentMethod ?? 'cash',
+      paymentIntentId: paymentIntentId ?? null,
     });
+
+    // Unit II & III: Inter-service event publication with Lamport & Vector timestamping
+    try {
+      const { eventBus } = await import('../communication/eventBus.js');
+      eventBus.publish('ORDER_CREATED', 'order-service', 'queue-service', {
+        orderId: order.id,
+        queueNumber: order.queueNumber,
+        itemsCount: items.length,
+        totalPrice
+      });
+    } catch (dsErr) {
+      console.warn('DS event emission notice:', dsErr);
+    }
 
     res.status(201).json(order);
   } catch (err) {
@@ -155,6 +176,18 @@ router.patch('/:id/status', async (req: AuthRequest, res: Response) => {
     if (!order) {
       res.status(404).json({ error: 'Order not found' });
       return;
+    }
+
+    // Unit II & III: Inter-service event publication with Lamport & Vector timestamping
+    try {
+      const { eventBus } = await import('../communication/eventBus.js');
+      eventBus.publish('ORDER_STATUS_CHANGED', 'kitchen-service', 'queue-service', {
+        orderId: order.id,
+        newStatus: status,
+        queueNumber: order.queueNumber
+      });
+    } catch (dsErr) {
+      console.warn('DS status emission notice:', dsErr);
     }
 
     res.json(order);

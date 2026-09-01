@@ -1,33 +1,83 @@
+version: '3.8'
+
 services:
-
-  backend:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
-    container_name: canteen-backend
-    restart: unless-stopped
-
+  postgres:
+    image: postgres:15-alpine
+    container_name: canteen-postgres
+    restart: always
     environment:
-      NODE_ENV: production
-      PORT: 5000
-      DATABASE_URL: ${DATABASE_URL}
-
-    expose:
-      - "5000"
-
-  frontend:
-    build:
-      context: .
-      dockerfile: frontend/Dockerfile
-
-      args:
-        VITE_API_BASE_URL: http://15.207.89.23
-
-    container_name: canteen-frontend
-    restart: unless-stopped
-
+      POSTGRES_DB: canteen
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgrespassword
     ports:
-      - "80:80"
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
 
+  redis:
+    image: redis:7-alpine
+    container_name: canteen-redis-pubsub
+    restart: always
+    ports:
+      - "6379:6379"
+
+  order-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.service
+    container_name: order-service-node
+    environment:
+      PORT: 3001
+      SERVICE_NAME: order-service
+      DATABASE_URL: postgresql://postgres:postgrespassword@postgres:5432/canteen
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "3001:3001"
     depends_on:
-      - backend
+      - postgres
+      - redis
+
+  queue-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.service
+    container_name: queue-service-node
+    environment:
+      PORT: 3002
+      SERVICE_NAME: queue-service
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "3002:3002"
+    depends_on:
+      - redis
+
+  kitchen-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.service
+    container_name: kitchen-service-node
+    environment:
+      PORT: 3003
+      SERVICE_NAME: kitchen-service
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "3003:3003"
+    depends_on:
+      - redis
+
+  notification-service:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.service
+    container_name: notification-serverless-worker
+    environment:
+      PORT: 3004
+      SERVICE_NAME: notification-service
+      REDIS_URL: redis://redis:6379
+    ports:
+      - "3004:3004"
+    depends_on:
+      - redis
+
+volumes:
+  pgdata:

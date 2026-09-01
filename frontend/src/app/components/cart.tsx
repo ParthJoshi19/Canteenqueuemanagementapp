@@ -27,21 +27,36 @@ interface CartProps {
   onClearCart: () => void;
 }
 
+import { PaymentModal, PaymentSuccessResult } from './payment-modal';
+
 export function Cart({ items, onRemoveItem, onPlaceOrder, onOrderConfirmed, onClearCart }: CartProps) {
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
   const [orderConfirmation, setOrderConfirmation] = useState<OrderConfirmation | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  
+  // Payment Modal State
+  const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [paymentResult, setPaymentResult] = useState<PaymentSuccessResult | null>(null);
 
   const totalPrice = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const estimatedTime = Math.max(...items.map(item => item.prepTime), 0);
 
-  const handlePlaceOrder = async () => {
+  const initiateCheckout = () => {
     if (items.length === 0) {
       toast.error('Cart is empty');
       return;
     }
+    setPaymentModalOpen(true);
+  };
 
+  const handlePaymentSuccess = (result: PaymentSuccessResult) => {
+    setPaymentResult(result);
+    // Proceed to place order on backend
+    handlePlaceOrder(result);
+  };
+
+  const handlePlaceOrder = async (paymentData: PaymentSuccessResult) => {
     setIsPlacingOrder(true);
     try {
       const response = await fetch(apiUrl('/api/orders'), {
@@ -51,7 +66,10 @@ export function Cart({ items, onRemoveItem, onPlaceOrder, onOrderConfirmed, onCl
         body: JSON.stringify({
           items: items.map(item => item.id),
           totalPrice,
-          estimatedTime
+          estimatedTime,
+          paymentStatus: paymentData.paymentStatus,
+          paymentMethod: paymentData.paymentMethod,
+          paymentIntentId: paymentData.paymentIntentId,
         })
       });
 
@@ -80,6 +98,7 @@ export function Cart({ items, onRemoveItem, onPlaceOrder, onOrderConfirmed, onCl
       toast.error('Error placing order', { description: 'Please try again' });
     } finally {
       setIsPlacingOrder(false);
+      setPaymentResult(null);
     }
   };
 
@@ -122,7 +141,7 @@ export function Cart({ items, onRemoveItem, onPlaceOrder, onOrderConfirmed, onCl
               <div className="space-y-3 border-y py-4 bg-muted/50 rounded-lg p-4">
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Order Total</span>
-                  <span className="font-semibold">₹{Math.floor(orderConfirmation.totalPrice)}</span>
+                  <span className="font-semibold font-mono">₹{orderConfirmation.totalPrice.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Estimated Ready Time</span>
@@ -185,7 +204,7 @@ export function Cart({ items, onRemoveItem, onPlaceOrder, onOrderConfirmed, onCl
                                 <div>
                                   <h4 className="mb-1">{item.name}</h4>
                                   <p className="text-sm text-muted-foreground">
-                                    ₹{Math.floor(item.price)} × {item.quantity}
+                                    ₹{item.price.toFixed(2)} × {item.quantity}
                                   </p>
                                 </div>
                                 <Button
@@ -197,8 +216,8 @@ export function Cart({ items, onRemoveItem, onPlaceOrder, onOrderConfirmed, onCl
                                   <Trash2 className="w-4 h-4 text-destructive" />
                                 </Button>
                               </div>
-                              <p className="text-sm mt-2 text-primary">
-                                ₹{Math.floor(item.price * item.quantity)}
+                              <p className="text-sm mt-2 text-primary font-semibold font-mono">
+                                ₹{(item.price * item.quantity).toFixed(2)}
                               </p>
                             </div>
                           </div>
@@ -211,15 +230,15 @@ export function Cart({ items, onRemoveItem, onPlaceOrder, onOrderConfirmed, onCl
                   <div className="space-y-2">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Subtotal</span>
-                      <span>₹{Math.floor(totalPrice)}</span>
+                      <span className="font-mono font-medium">₹{totalPrice.toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Estimated time</span>
                       <span>{estimatedTime} mins</span>
                     </div>
                     <div className="flex justify-between pt-2 border-t">
-                      <span>Total</span>
-                      <span className="text-xl text-primary">₹{Math.floor(totalPrice)}</span>
+                      <span className="font-semibold">Total</span>
+                      <span className="text-xl text-primary font-bold font-mono">₹{totalPrice.toFixed(2)}</span>
                     </div>
                   </div>
 
@@ -236,11 +255,11 @@ export function Cart({ items, onRemoveItem, onPlaceOrder, onOrderConfirmed, onCl
                       Clear
                     </Button>
                     <Button 
-                      onClick={handlePlaceOrder} 
+                      onClick={initiateCheckout} 
                       className="flex-1 bg-primary hover:bg-accent"
                       disabled={isPlacingOrder || items.length === 0}
                     >
-                      {isPlacingOrder ? 'Placing...' : 'Place Order'}
+                      {isPlacingOrder ? 'Processing...' : 'Proceed to Payment'}
                     </Button>
                   </div>
                 </div>
@@ -249,6 +268,13 @@ export function Cart({ items, onRemoveItem, onPlaceOrder, onOrderConfirmed, onCl
           </>
         )}
       </SheetContent>
+
+      <PaymentModal
+        open={paymentModalOpen}
+        onOpenChange={setPaymentModalOpen}
+        amount={totalPrice}
+        onPaymentSuccess={handlePaymentSuccess}
+      />
     </Sheet>
   );
 }

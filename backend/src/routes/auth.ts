@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import { createUser, findUserById, findUserByUsername, verifyPassword } from '../models/User.js';
+import { createGuestUser, createUser, findUserById, findUserByUsername, verifyPassword } from '../models/User.js';
 import { AuthRequest, authenticate, generateToken } from '../middleware/auth.js';
 
 const router = Router();
@@ -70,6 +70,40 @@ router.post('/login', async (req: AuthRequest, res: Response) => {
     res.json({ id: user.id, username: user.username });
   } catch (err) {
     console.error('Login error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// POST /api/auth/guest
+router.post('/guest', async (req: AuthRequest, res: Response) => {
+  try {
+    const { displayName, profilePicture, bio } = req.body as {
+      displayName?: string;
+      profilePicture?: string;
+      bio?: string;
+    };
+
+    const user = await createGuestUser({ displayName, profilePicture, bio });
+    const token = generateToken(user.id);
+
+    res.cookie('token', token, {
+      httpOnly: true,
+      secure: false,
+      sameSite: 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+    });
+
+    res.status(201).json({
+      id: user.id,
+      username: user.username,
+      displayName: user.displayName,
+      bio: user.bio,
+      profilePicture: user.profilePicture,
+      profileCompleted: user.profileCompleted,
+      role: user.role,
+    });
+  } catch (err) {
+    console.error('Guest login error:', err);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

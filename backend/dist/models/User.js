@@ -1,5 +1,5 @@
-import bcrypt from 'bcrypt';
-import { query } from '../config/db.js';
+import bcrypt from "bcrypt";
+import { query } from "../config/db.js";
 function toUser(row) {
     return {
         _id: row._id,
@@ -16,28 +16,56 @@ function toUser(row) {
 function toUserWithPassword(row) {
     return {
         ...toUser(row),
-        passwordHash: row.passwordHash ?? '',
+        passwordHash: row.passwordHash ?? "",
     };
 }
 export async function createUser(input) {
     const passwordHash = await bcrypt.hash(input.password, 12);
-    const result = await query(`INSERT INTO users (username, password_hash, role, display_name, profile_completed)
-     VALUES ($1, $2, $3, $4, $5)
-     RETURNING
-      id AS "_id",
-      id,
-      username,
-      display_name AS "displayName",
-      bio,
-      profile_picture AS "profilePicture",
-      profile_completed AS "profileCompleted",
-      role,
-      created_at AS "createdAt"`, [
+    const result = await query(`INSERT INTO users (id, username, password_hash, role, display_name, profile_completed)
+   VALUES (DEFAULT, $1, $2, $3, $4, $5)
+   RETURNING
+    id AS "_id",
+    id,
+    username,
+    display_name AS "displayName",
+    bio,
+    profile_picture AS "profilePicture",
+    profile_completed AS "profileCompleted",
+    role,
+    created_at AS "createdAt"`, [
         input.username.trim(),
         passwordHash,
-        input.role ?? 'user',
-        input.displayName ?? '',
+        input.role ?? "user",
+        input.displayName ?? "",
         input.profileCompleted ?? false,
+    ]);
+    return toUser(result.rows[0]);
+}
+export async function createGuestUser(input) {
+    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+    const username = `guest_${Date.now().toString(36)}_${randomSuffix}`;
+    const displayName = input?.displayName?.trim() || `Guest #${randomSuffix}`;
+    const randomSecret = Math.random().toString(36) + Math.random().toString(36);
+    const passwordHash = await bcrypt.hash(randomSecret, 10);
+    const result = await query(`INSERT INTO users (id, username, password_hash, role, display_name, bio, profile_picture, profile_completed)
+   VALUES (DEFAULT, $1, $2, $3, $4, $5, $6, $7)
+   RETURNING
+    id AS "_id",
+    id,
+    username,
+    display_name AS "displayName",
+    bio,
+    profile_picture AS "profilePicture",
+    profile_completed AS "profileCompleted",
+    role,
+    created_at AS "createdAt"`, [
+        username,
+        passwordHash,
+        "user",
+        displayName,
+        input?.bio?.trim() || "",
+        input?.profilePicture?.trim() || "",
+        true,
     ]);
     return toUser(result.rows[0]);
 }
@@ -55,7 +83,7 @@ export async function findUserByUsername(username, role) {
       role,
       created_at AS "createdAt"
      FROM users
-     WHERE username = $1 ${hasRole ? 'AND role = $2' : ''}
+     WHERE username = $1 ${hasRole ? "AND role = $2" : ""}
      LIMIT 1`, hasRole ? [username.trim(), role] : [username.trim()]);
     if (result.rows.length === 0)
         return null;
@@ -87,7 +115,8 @@ export async function updateUserProfile(id, update) {
      SET
        display_name = COALESCE($2, display_name),
        bio = COALESCE($3, bio),
-       profile_completed = COALESCE($4, profile_completed)
+       profile_picture = COALESCE($4, profile_picture),
+       profile_completed = COALESCE($5, profile_completed)
      WHERE id = $1
      RETURNING
       id AS "_id",
@@ -98,7 +127,13 @@ export async function updateUserProfile(id, update) {
       profile_picture AS "profilePicture",
       profile_completed AS "profileCompleted",
       role,
-      created_at AS "createdAt"`, [id, update.displayName ?? null, update.bio ?? null, update.profileCompleted ?? null]);
+      created_at AS "createdAt"`, [
+        id,
+        update.displayName ?? null,
+        update.bio ?? null,
+        update.profilePicture ?? null,
+        update.profileCompleted ?? null,
+    ]);
     if (result.rows.length === 0)
         return null;
     return toUser(result.rows[0]);

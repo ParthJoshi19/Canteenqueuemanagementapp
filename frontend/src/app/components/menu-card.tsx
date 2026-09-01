@@ -31,7 +31,7 @@ export function MenuCard({ item, onAddToCart }: MenuCardProps) {
         </div>
       </CardContent>
       <CardFooter className="p-4 pt-0 flex items-center justify-between">
-        <span className="text-xl text-primary">₹{Math.floor(item.price*10)}</span>
+        <span className="text-xl font-bold text-primary">₹{item.price.toFixed(2)}</span>
         <Button onClick={() => onAddToCart(item)} className="bg-primary hover:bg-accent">
           <Plus className="w-4 h-4 mr-2" />
           Add to Cart

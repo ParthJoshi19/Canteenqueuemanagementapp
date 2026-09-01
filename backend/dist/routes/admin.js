@@ -3,6 +3,7 @@ import multer from 'multer';
 import { findUserById, findUserByUsername, verifyPassword } from '../models/User.js';
 import { createMenuItem, deleteMenuItem, findMenuItemById, findMenuItems, updateMenuItem, } from '../models/MenuItem.js';
 import { findAllOrdersWithUser, updateOrderStatusWithUser } from '../models/Order.js';
+import { findAllEventOrders, updateEventOrderStatus, } from '../models/EventOrder.js';
 import { authenticateAdmin, generateToken } from '../middleware/auth.js';
 import { uploadToS3, deleteFromS3 } from '../config/s3.js';
 const router = Router();
@@ -34,7 +35,7 @@ router.post('/login', async (req, res) => {
         const token = generateToken(user.id);
         res.cookie('token', token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
+            secure: false,
             sameSite: 'lax',
             maxAge: 7 * 24 * 60 * 60 * 1000,
         });
@@ -200,6 +201,46 @@ router.patch('/orders/:id/status', authenticateAdmin, async (req, res) => {
     }
     catch (err) {
         console.error('Admin order status update error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+// GET /api/admin/event-orders — list all event pre-orders
+router.get('/event-orders', authenticateAdmin, async (_req, res) => {
+    try {
+        const eventOrders = await findAllEventOrders();
+        res.json(eventOrders);
+    }
+    catch (err) {
+        console.error('Admin event orders list error:', err);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+// PATCH /api/admin/event-orders/:id/status — update event pre-order status
+router.patch('/event-orders/:id/status', authenticateAdmin, async (req, res) => {
+    try {
+        const { status } = req.body;
+        const validStatuses = [
+            'pending',
+            'confirmed',
+            'preparing',
+            'ready',
+            'completed',
+            'cancelled',
+        ];
+        if (!status || !validStatuses.includes(status)) {
+            res.status(400).json({ error: 'Invalid event order status' });
+            return;
+        }
+        const orderId = String(req.params.id);
+        const updated = await updateEventOrderStatus(orderId, status);
+        if (!updated) {
+            res.status(404).json({ error: 'Event order not found' });
+            return;
+        }
+        res.json(updated);
+    }
+    catch (err) {
+        console.error('Admin event order status update error:', err);
         res.status(500).json({ error: 'Internal server error' });
     }
 });

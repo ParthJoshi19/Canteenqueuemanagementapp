@@ -39,21 +39,20 @@ router.get('/', authenticate, async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
-// PUT /api/profile — update display name & bio
+// PUT /api/profile — update display name, bio & profile picture
 router.put('/', authenticate, async (req, res) => {
     try {
-        const { displayName, bio } = req.body;
-        const update = {};
+        const { displayName, bio, profilePicture } = req.body;
+        const update = {
+            profileCompleted: true,
+        };
         if (displayName !== undefined)
             update.displayName = displayName.trim();
         if (bio !== undefined)
             update.bio = bio.trim();
-        update.profileCompleted = true;
-        const user = await updateUserProfile(req.userId, {
-            displayName: update.displayName,
-            bio: update.bio,
-            profileCompleted: true,
-        });
+        if (profilePicture !== undefined)
+            update.profilePicture = profilePicture.trim();
+        const user = await updateUserProfile(req.userId, update);
         if (!user) {
             res.status(404).json({ error: 'User not found' });
             return;

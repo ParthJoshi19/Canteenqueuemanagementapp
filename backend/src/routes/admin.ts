@@ -9,6 +9,11 @@ import {
   updateMenuItem,
 } from '../models/MenuItem.js';
 import { findAllOrdersWithUser, updateOrderStatusWithUser } from '../models/Order.js';
+import {
+  findAllEventOrders,
+  updateEventOrderStatus,
+  EventOrderStatus,
+} from '../models/EventOrder.js';
 import { AuthRequest, authenticateAdmin, generateToken } from '../middleware/auth.js';
 import { uploadToS3, deleteFromS3 } from '../config/s3.js';
 
@@ -262,5 +267,53 @@ router.patch('/orders/:id/status', authenticateAdmin, async (req: AuthRequest, r
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// GET /api/admin/event-orders — list all event pre-orders
+router.get('/event-orders', authenticateAdmin, async (_req: AuthRequest, res: Response) => {
+  try {
+    const eventOrders = await findAllEventOrders();
+    res.json(eventOrders);
+  } catch (err) {
+    console.error('Admin event orders list error:', err);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// PATCH /api/admin/event-orders/:id/status — update event pre-order status
+router.patch(
+  '/event-orders/:id/status',
+  authenticateAdmin,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const { status } = req.body as { status?: string };
+      const validStatuses: EventOrderStatus[] = [
+        'pending',
+        'confirmed',
+        'preparing',
+        'ready',
+        'completed',
+        'cancelled',
+      ];
+
+      if (!status || !validStatuses.includes(status as EventOrderStatus)) {
+        res.status(400).json({ error: 'Invalid event order status' });
+        return;
+      }
+
+      const orderId = String(req.params.id);
+      const updated = await updateEventOrderStatus(orderId, status as EventOrderStatus);
+
+      if (!updated) {
+        res.status(404).json({ error: 'Event order not found' });
+        return;
+      }
+
+      res.json(updated);
+    } catch (err) {
+      console.error('Admin event order status update error:', err);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  },
+);
 
 export default router;

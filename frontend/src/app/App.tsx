@@ -10,6 +10,9 @@ import { Cart } from '@/app/components/cart';
 import { OrderTracking, Order } from '@/app/components/order-tracking';
 import { QueueDisplay } from '@/app/components/queue-display';
 import { Header } from '@/app/components/header';
+import { EventPreorderDialog } from '@/app/components/event-preorder-dialog';
+import { EventOrdersList } from '@/app/components/event-orders-list';
+import { DsInspector } from '@/app/components/DsInspector';
 import { toast } from 'sonner';
 import { Toaster } from '@/app/components/ui/sonner';
 import { apiUrl } from '@/app/lib/api';
@@ -61,6 +64,8 @@ export default function App() {
   const [menuLoading, setMenuLoading] = useState(true);
   const [queueInfo, setQueueInfo] = useState({ currentQueue: 0, averageWaitTime: 0 });
   const [showQueueDisplay, setShowQueueDisplay] = useState(false);
+  const [showEventPreorderDialog, setShowEventPreorderDialog] = useState(false);
+  const [showEventOrdersList, setShowEventOrdersList] = useState(false);
 
   // Fetch menu items from backend
   const fetchMenu = useCallback(async () => {
@@ -313,6 +318,7 @@ export default function App() {
           setUserProfile({ ...updated, role: userProfile?.role ?? 'user' });
           setShowProfileSetup(false);
         }}
+        onCancel={() => setShowProfileSetup(false)}
       />
     );
   }
@@ -331,6 +337,9 @@ export default function App() {
           username: userProfile.username,
         } : undefined}
         onProfileClick={() => setShowProfileSetup(true)}
+        onOpenEventPreorder={() => setShowEventPreorderDialog(true)}
+        onOpenEventOrdersList={() => setShowEventOrdersList(true)}
+        onOpenDsInspector={() => setShowDsInspector(true)}
         onLogout={async () => {
           await fetch(apiUrl('/api/auth/logout'), { method: 'POST', credentials: 'include' });
           setIsAuthenticated(false);
@@ -344,13 +353,42 @@ export default function App() {
       <main className="container mx-auto px-4 py-8">
         {!showQueueDisplay ? (
           <>
-            <div className="flex justify-end mb-6">
-              <button
-                onClick={() => setShowQueueDisplay(true)}
-                className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-sm font-medium"
+            {/* Action Bar / Event Banner */}
+            <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+              <div
+                onClick={() => setShowEventPreorderDialog(true)}
+                className="flex items-center gap-3 p-3 bg-gradient-to-r from-primary/15 via-primary/5 to-transparent border border-primary/25 rounded-xl cursor-pointer hover:border-primary/50 transition-all group"
               >
-                📊 View Queue ({queueInfo.currentQueue})
-              </button>
+                <div className="p-2 bg-primary text-primary-foreground rounded-lg shadow-sm group-hover:scale-105 transition-transform">
+                  📅
+                </div>
+                <div>
+                  <h4 className="text-sm font-bold text-foreground flex items-center gap-1.5">
+                    Hosting a College Event or Club Meet?
+                    <span className="text-[10px] px-1.5 py-0.2 bg-primary/20 text-primary font-bold rounded-full">
+                      Bulk Pre-Order
+                    </span>
+                  </h4>
+                  <p className="text-xs text-muted-foreground">
+                    Pre-order snacks, meals & drinks in bulk with scheduled delivery across campus halls.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowEventOrdersList(true)}
+                  className="px-3.5 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-lg transition-colors text-xs font-semibold border border-border"
+                >
+                  📅 My Event Orders
+                </button>
+                <button
+                  onClick={() => setShowQueueDisplay(true)}
+                  className="px-4 py-2 bg-secondary text-secondary-foreground rounded-lg hover:bg-secondary/80 transition-colors text-xs font-semibold shadow-sm"
+                >
+                  📊 View Queue ({queueInfo.currentQueue})
+                </button>
+              </div>
             </div>
 
             {menuLoading ? (
@@ -407,6 +445,27 @@ export default function App() {
       {currentOrder && (
         <OrderTracking order={currentOrder} onNewOrder={handleNewOrder} />
       )}
+
+      {/* College Event Pre-Order & Bulk Catering Dialog */}
+      <EventPreorderDialog
+        open={showEventPreorderDialog}
+        onOpenChange={setShowEventPreorderDialog}
+        menuItems={backendMenuItems}
+        defaultContactName={userProfile?.displayName || userProfile?.username || ''}
+      />
+
+      {/* User's Event Orders List */}
+      <EventOrdersList
+        open={showEventOrdersList}
+        onOpenChange={setShowEventOrdersList}
+        onNewPreorderClick={() => setShowEventPreorderDialog(true)}
+      />
+
+      {/* Interactive Distributed Systems Inspector */}
+      <DsInspector
+        isOpen={showDsInspector}
+        onClose={() => setShowDsInspector(false)}
+      />
     </div>
   );
 }

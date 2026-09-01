@@ -86,6 +86,44 @@ export async function createUser(input: {
   return toUser(result.rows[0]);
 }
 
+export async function createGuestUser(input?: {
+  displayName?: string;
+  profilePicture?: string;
+  bio?: string;
+}): Promise<IUser> {
+  const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+  const username = `guest_${Date.now().toString(36)}_${randomSuffix}`;
+  const displayName = input?.displayName?.trim() || `Guest #${randomSuffix}`;
+  const randomSecret = Math.random().toString(36) + Math.random().toString(36);
+  const passwordHash = await bcrypt.hash(randomSecret, 10);
+
+  const result = await query<UserRow>(
+    `INSERT INTO users (id, username, password_hash, role, display_name, bio, profile_picture, profile_completed)
+   VALUES (DEFAULT, $1, $2, $3, $4, $5, $6, $7)
+   RETURNING
+    id AS "_id",
+    id,
+    username,
+    display_name AS "displayName",
+    bio,
+    profile_picture AS "profilePicture",
+    profile_completed AS "profileCompleted",
+    role,
+    created_at AS "createdAt"`,
+    [
+      username,
+      passwordHash,
+      "user",
+      displayName,
+      input?.bio?.trim() || "",
+      input?.profilePicture?.trim() || "",
+      true,
+    ],
+  );
+
+  return toUser(result.rows[0]);
+}
+
 export async function findUserByUsername(
   username: string,
   role?: UserRole,
@@ -144,14 +182,15 @@ export async function verifyPassword(
 
 export async function updateUserProfile(
   id: string,
-  update: { displayName?: string; bio?: string; profileCompleted?: boolean },
+  update: { displayName?: string; bio?: string; profilePicture?: string; profileCompleted?: boolean },
 ): Promise<IUser | null> {
   const result = await query<UserRow>(
     `UPDATE users
      SET
        display_name = COALESCE($2, display_name),
        bio = COALESCE($3, bio),
-       profile_completed = COALESCE($4, profile_completed)
+       profile_picture = COALESCE($4, profile_picture),
+       profile_completed = COALESCE($5, profile_completed)
      WHERE id = $1
      RETURNING
       id AS "_id",
@@ -167,6 +206,7 @@ export async function updateUserProfile(
       id,
       update.displayName ?? null,
       update.bio ?? null,
+      update.profilePicture ?? null,
       update.profileCompleted ?? null,
     ],
   );

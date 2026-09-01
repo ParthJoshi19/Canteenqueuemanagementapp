@@ -97,7 +97,7 @@ export function OrderTracking({ order, onNewOrder }: OrderTrackingProps) {
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Total Amount</span>
-              <span>₹{Math.floor(order.totalPrice*10)}</span>
+              <span className="font-semibold font-mono">₹{order.totalPrice.toFixed(2)}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Estimated Time</span>

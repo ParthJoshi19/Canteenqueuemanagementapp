@@ -1,61 +1,30 @@
-# Canteen Queue Management
+# Distributed Canteen Queue Management System
 
-A full-stack canteen ordering and queue management system for colleges. The frontend lets students browse the menu, build a cart, place orders, and track queue status in real time. The backend handles authentication, menu management, order processing, profile updates, and admin operations.
+A full-stack distributed canteen ordering and queue management system built to demonstrate **Distributed Systems Concepts (Units I, II, III, and IV)** alongside a full user experience for students and admins.
 
-## Project Structure
+---
 
-This repository is split into two apps:
+## 🚀 Quick Start Guide
 
-- `frontend/` - React + Vite UI for students and admins
-- `backend/` - Express + TypeScript API with PostgreSQL persistence
+### Option A: Run via Docker Compose (Recommended for Distributed Systems Demo)
 
-## Features
+Run all microservices (`Order Service`, `Queue Service`, `Kitchen Service`, `Notification Worker`), PostgreSQL, and Redis in isolated containers with a single command:
 
-### Frontend
+```bash
+docker-compose up --build
+```
 
-- Student login and signup flows
-- Admin login and dashboard
-- Menu browsing with category filters
-- Cart and order placement
-- Live order tracking and queue updates
-- Profile setup and profile editing
+- **Frontend App**: `http://localhost:5173`
+- **Backend API**: `http://localhost:3000`
+- **Order Service**: `http://localhost:3001`
+- **Queue Service**: `http://localhost:3002`
+- **Kitchen Service**: `http://localhost:3003`
 
-### Backend
+---
 
-- JWT-based authentication with cookie sessions
-- Menu item APIs for public browsing and admin management
-- Order APIs for placing orders and tracking queue position
-- Admin APIs for menu and order moderation
-- PostgreSQL persistence
-- Optional AWS S3 image upload support for profile and menu assets
+### Option B: Run Locally in Development Mode
 
-## Tech Stack
-
-### Frontend
-
-- React
-- Vite
-- TypeScript
-- Tailwind CSS
-- Radix UI components
-- MUI icons and supporting UI libraries
-
-### Backend
-
-- Node.js
-- Express
-- TypeScript
-- PostgreSQL
-- JSON Web Tokens
-- bcrypt
-- AWS SDK for S3 uploads
-
-## Getting Started
-
-### 1. Install dependencies
-
-Install the backend and frontend dependencies separately:
-
+#### 1. Install Dependencies
 ```bash
 cd backend
 npm install
@@ -64,76 +33,111 @@ cd ../frontend
 npm install
 ```
 
-### 2. Configure the backend
+#### 2. Set Up Environment Variables
 
-Create a `.env` file in `backend/` with the required values. You can use either `DATABASE_URL` or the individual PostgreSQL fields.
-
+Create `backend/.env`:
 ```env
-DATABASE_URL=postgresql://postgres:postgres@localhost:5432/canteen
-JWT_SECRET=replace-with-a-strong-secret
+PORT=3000
+DATABASE_URL=postgresql://postgres:postgrespassword@localhost:5432/canteen
+JWT_SECRET=super-secret-jwt-key
 CLIENT_URL=http://localhost:5173
-
-# Optional S3 settings for image uploads
-AWS_REGION=us-east-1
-AWS_ACCESS_KEY_ID=your-access-key
-AWS_SECRET_ACCESS_KEY=your-secret-key
-AWS_S3_BUCKET=your-bucket-name
 ```
 
-### 3. Run database migrations and seeds
+Create `frontend/.env`:
+```env
+VITE_API_BASE_URL=http://localhost:3000
+```
 
-From the `backend/` folder:
-
+#### 3. Run Database Migrations & Seeds
+From `backend/`:
 ```bash
 npm run migrate
 npm run seed
 npm run seed:admin
 ```
 
-### 4. Configure the frontend
-
-Create a `.env` file in `frontend/`:
-
-```env
-VITE_API_BASE_URL=http://localhost:3000
-```
-
-## Running Locally
-
-### Backend
-
+#### 4. Launch Services
 ```bash
+# Terminal 1 - Backend API & DS Engine
 cd backend
 npm run dev
-```
 
-The backend API listens on port `3000` and exposes routes under `/api`.
-
-### Frontend
-
-```bash
+# Terminal 2 - Frontend App
 cd frontend
 npm run dev
 ```
 
-The frontend runs with Vite and talks to the backend through `VITE_API_BASE_URL`.
+---
 
-## API Overview
+### Option C: Deploy to Kubernetes (Unit IV)
 
-The backend exposes these route groups:
+Deploy microservices with Horizontal Pod Autoscaling (HPA) and Ingress:
 
-- `/api/auth` - user registration, login, logout, and session lookup
-- `/api/menu` - public menu listing and category filtering
-- `/api/orders` - user order creation, order history, and queue info
-- `/api/profile` - profile details and profile picture updates
-- `/api/admin` - admin login, menu management, and order status updates
+```bash
+kubectl apply -f k8s/postgres-redis.yaml
+kubectl apply -f k8s/microservices.yaml
+kubectl apply -f k8s/ingress-hpa.yaml
+```
 
-## What The App Does
+---
 
-Students can sign up, log in, browse the menu, add items to a cart, place an order, and monitor queue status while the kitchen processes the order. Admins can log in separately, manage menu items, and update order statuses from the dashboard.
+## 🔬 Distributed Systems Features (Units I – IV)
 
-## Notes
+### 🟢 Unit I – Introduction to Distributed Systems & Virtualization
+- **Microservices Topology**: Decoupled services (`order-service`, `queue-service`, `kitchen-service`, `notification-service`).
+- **Containerization**: Multi-stage `Dockerfile.service` and `docker-compose.yml` for isolated service execution.
 
-- The frontend expects the backend to be reachable through `VITE_API_BASE_URL`.
-- If you enable S3 uploads, make sure the bucket policy allows the generated public URLs to be served.
-- The backend requires PostgreSQL to be available before startup.
+### 🔵 Unit II – Inter-Service Communication
+- **Remote Procedure Call (RPC)**: Synchronous inter-service RPC framework (`checkCapacity()`, `reserveStock()`).
+- **Message-Oriented Communication**: Event-driven Pub/Sub broker broadcasting `ORDER_CREATED` and `ORDER_STATUS_CHANGED`.
+- **Stream-Oriented Communication**: Real-time Server-Sent Events (SSE) stream (`/api/ds/stream`) pushing queue and algorithm updates to the UI.
+
+### 🟡 Unit III – Synchronization & Core DS Algorithms
+- **Lamport Logical Clocks**: Enforces total ordering of inter-service messages with rule $L_{recv} = \max(L_{local}, L_{remote}) + 1$.
+- **Vector Clocks**: Vector clock tuples `[OrderService, QueueService, KitchenService]` tracking causal dependencies and concurrent updates.
+- **Leader Election (Bully Algorithm)**: Elects the highest-ID active QueueWorker process as Primary Coordinator. Includes node crash/recovery triggers.
+- **Distributed Mutual Exclusion (Ricart-Agrawala Algorithm)**: Grants exclusive critical section locks for order preparation to prevent double processing across kitchen stations.
+
+### 🟣 Unit IV – Emerging Distributed Paradigms
+- **Distributed Storage & Caching**: PostgreSQL for persistence + Redis for fast distributed state & pub/sub.
+- **Serverless Simulation**: Asynchronous event handler simulating AWS Lambda for notification dispatch.
+- **Kubernetes Orchestration**: Production-ready k8s manifests with HPA and ingress rules in `k8s/`.
+
+---
+
+## 🖥️ Interactive DS Inspector UI
+
+The application includes an interactive **Distributed Systems Inspector** built into the frontend header navbar!
+
+1. Open `http://localhost:5173` in your browser.
+2. Click the purple **DS Inspector** button in the header.
+3. Interactively test:
+   - **Lamport Clock Monitor**: Watch real-time tick counters per service or click **Tick Clock (+1)**.
+   - **Vector Clock Matrix**: View vector states and causal relationship comparisons.
+   - **Bully Leader Election**: Simulate node crashes or trigger elections.
+   - **Ricart-Agrawala Mutex**: Request or release order preparation locks across simulated kitchen stations.
+   - **RPC Execution Console**: Issue synchronous inter-service calls and view execution time logs.
+
+---
+
+## 📁 Repository Structure
+
+```
+.
+├── backend/
+│   ├── Dockerfile.service       # Multi-stage container file for microservices
+│   ├── src/
+│   │   ├── ds/                  # Unit III: Lamport, Vector Clocks, Bully Election, Mutex
+│   │   ├── communication/       # Unit II: RPC, Message Bus, SSE Stream Server
+│   │   ├── routes/              # Express API Routes & DS Endpoints (/api/ds)
+│   │   └── server.ts            # Entrypoint
+├── frontend/
+│   ├── src/
+│   │   ├── app/components/
+│   │   │   ├── DsInspector.tsx  # Interactive DS Visual Dashboard
+│   │   │   ├── header.tsx       # Header with DS Inspector Trigger
+│   │   │   └── App.tsx          # Main React Application
+├── k8s/                         # Unit IV: Kubernetes manifests (HPA, Ingress, Deployments)
+├── docker-compose.yml           # Unit I: Docker Compose Multi-Container Orchestration
+└── README.md
+```

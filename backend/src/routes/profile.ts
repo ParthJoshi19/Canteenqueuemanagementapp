@@ -41,21 +41,23 @@ router.get('/', authenticate, async (req: AuthRequest, res: Response) => {
   }
 });
 
-// PUT /api/profile — update display name & bio
+// PUT /api/profile — update display name, bio & profile picture
 router.put('/', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const { displayName, bio } = req.body as { displayName?: string; bio?: string };
+    const { displayName, bio, profilePicture } = req.body as {
+      displayName?: string;
+      bio?: string;
+      profilePicture?: string;
+    };
 
-    const update: Record<string, unknown> = {};
+    const update: { displayName?: string; bio?: string; profilePicture?: string; profileCompleted: boolean } = {
+      profileCompleted: true,
+    };
     if (displayName !== undefined) update.displayName = displayName.trim();
     if (bio !== undefined) update.bio = bio.trim();
-    update.profileCompleted = true;
+    if (profilePicture !== undefined) update.profilePicture = profilePicture.trim();
 
-    const user = await updateUserProfile(req.userId!, {
-      displayName: update.displayName as string | undefined,
-      bio: update.bio as string | undefined,
-      profileCompleted: true,
-    });
+    const user = await updateUserProfile(req.userId!, update);
     if (!user) {
       res.status(404).json({ error: 'User not found' });
       return;
