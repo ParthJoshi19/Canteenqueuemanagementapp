@@ -11,7 +11,7 @@ interface DsInspectorProps {
   onClose: () => void;
 }
 
-export function DsInspector({ apiBaseUrl = 'http://localhost:3000', isOpen, onClose }: DsInspectorProps) {
+export function DsInspector({ apiBaseUrl = 'http://localhost:5000', isOpen, onClose }: DsInspectorProps) {
   const [snapshot, setSnapshot] = useState<any>(null);
   const [activeTab, setActiveTab] = useState<string>('unit3');
   const [connected, setConnected] = useState<boolean>(false);
@@ -178,6 +178,48 @@ export function DsInspector({ apiBaseUrl = 'http://localhost:3000', isOpen, onCl
     }
   };
 
+  const handleTriggerGossip = async () => {
+    setLoadingAction('gossip');
+    try {
+      await fetch(`${apiBaseUrl}/api/ds/p2p/gossip/round`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      });
+      await fetchSnapshot();
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  const handleWebRTCSignal = async (action: string) => {
+    setLoadingAction(`webrtc-${action}`);
+    try {
+      await fetch(`${apiBaseUrl}/api/ds/webrtc/signal`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action, payload: { clientPeerId: 'StudentApp-Mobile', counterPeerId: 'KitchenCounter-1' } })
+      });
+      await fetchSnapshot();
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
+  const handleUpdateQoS = async (resolution: string, packetLoss: number) => {
+    setLoadingAction('qos');
+    try {
+      await fetch(`${apiBaseUrl}/api/ds/multimedia/qos`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ resolution, packetLossPercentage: packetLoss, adaptiveBitrateEnabled: true })
+      });
+      await fetchSnapshot();
+    } finally {
+      setLoadingAction(null);
+    }
+  };
+
   if (!isOpen) return null;
 
   return (
@@ -199,7 +241,7 @@ export function DsInspector({ apiBaseUrl = 'http://localhost:3000', isOpen, onCl
                 </Badge>
               </div>
               <p className="text-xs text-muted-foreground">
-                Real-time algorithm monitor: Lamport Clocks, Vector Clocks, Bully Leader Election & Mutex Lock
+                Real-time algorithm monitor: P2P Gossip, WebRTC, RPC, Lamport & Vector Clocks, Bully Election, QoS Streaming
               </p>
             </div>
           </div>
@@ -222,10 +264,10 @@ export function DsInspector({ apiBaseUrl = 'http://localhost:3000', isOpen, onCl
                 Unit III: Synchronization
               </TabsTrigger>
               <TabsTrigger value="unit2" className="text-xs font-semibold">
-                Unit II: Communication (RPC & SSE)
+                Unit II: Communication (RPC, P2P, WebRTC, SSE)
               </TabsTrigger>
               <TabsTrigger value="unit1" className="text-xs font-semibold">
-                Unit I: Microservices Topology
+                Unit I: Topology & Multimedia QoS
               </TabsTrigger>
               <TabsTrigger value="unit4" className="text-xs font-semibold">
                 Unit IV: Cloud & K8s Manifests
@@ -472,11 +514,125 @@ export function DsInspector({ apiBaseUrl = 'http://localhost:3000', isOpen, onCl
           {/* UNIT II: COMMUNICATION */}
           {activeTab === 'unit2' && (
             <div className="space-y-6">
+
+              {/* 1. Peer-to-Peer Gossip Messaging */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Network className="w-4 h-4 text-indigo-500" />
+                        1. Peer-to-Peer (P2P) Gossip Messaging Network
+                      </CardTitle>
+                      <CardDescription className="text-xs">
+                        Anti-Entropy Rumor Spreading: Canteen counter peer nodes gossip queue versions directly without a central server.
+                      </CardDescription>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      variant="default" 
+                      disabled={loadingAction === 'gossip'} 
+                      onClick={handleTriggerGossip}
+                      className="h-8 text-xs gap-1"
+                    >
+                      Trigger Gossip Round
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    {snapshot?.p2pGossip?.nodes?.map((peer: any) => (
+                      <div key={peer.nodeId} className="p-3 bg-muted/30 border rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-xs text-primary">{peer.nodeId}</span>
+                          <Badge variant="outline" className="text-[10px] bg-indigo-500/10 text-indigo-600 border-indigo-300">
+                            v{peer.localQueueVersion}
+                          </Badge>
+                        </div>
+                        <div className="text-xs font-semibold mt-1">{peer.name}</div>
+                        <div className="text-[10px] text-muted-foreground mt-1">
+                          IP: {peer.ipAddress}:{peer.port}
+                        </div>
+                        <div className="text-[11px] font-mono text-indigo-500 font-bold mt-1">
+                          Orders: {peer.knownOrdersCount}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Gossip Event History */}
+                  <div className="bg-muted/20 rounded-md p-3 text-xs space-y-1 max-h-32 overflow-y-auto border">
+                    <div className="font-semibold text-muted-foreground mb-1">P2P Gossip Transmission Trace:</div>
+                    {snapshot?.p2pGossip?.logs?.length === 0 ? (
+                      <span className="text-muted-foreground text-[11px]">Click "Trigger Gossip Round" to gossip state across peers...</span>
+                    ) : (
+                      snapshot?.p2pGossip?.logs?.slice(0, 5).map((g: any, idx: number) => (
+                        <div key={idx} className="flex items-center justify-between font-mono text-[11px] py-0.5 border-b border-border/40">
+                          <span className="text-indigo-600 font-bold">{g.senderNodeId} ➔ {g.targetNodeId}</span>
+                          <span>Synced Queue Version #{g.queueVersion} ({g.ordersCount} orders)</span>
+                          <span className="text-muted-foreground text-[10px]">{new Date(g.timestamp).toLocaleTimeString()}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* 2. WebRTC P2P Data Channel & Signaling */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Activity className="w-4 h-4 text-cyan-500" />
+                        2. WebRTC Peer-to-Peer Data Channel & SDP Signaling
+                      </CardTitle>
+                      <CardDescription className="text-xs">
+                        Direct browser-to-kitchen counter P2P channel via SDP Offer/Answer and ICE candidates.
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => handleWebRTCSignal('CREATE_OFFER')}>
+                        Create SDP Offer
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => handleWebRTCSignal('RECEIVE_ANSWER')}>
+                        Receive Answer
+                      </Button>
+                      <Button size="sm" variant="default" className="h-7 text-[11px]" onClick={() => handleWebRTCSignal('ADD_ICE_CANDIDATE')}>
+                        Send ICE Candidate
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                    {snapshot?.webRTC?.sessions?.map((s: any) => (
+                      <div key={s.sessionId} className="p-3 bg-muted/30 border rounded-lg space-y-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="font-mono font-bold text-primary">{s.sessionId}</span>
+                          <Badge variant="outline" className="bg-cyan-500/10 text-cyan-600 border-cyan-400 text-[10px]">
+                            {s.channelStatus}
+                          </Badge>
+                        </div>
+                        <div className="text-[11px]">Client: <span className="font-semibold">{s.clientPeerId}</span></div>
+                        <div className="text-[11px]">Counter: <span className="font-semibold">{s.counterPeerId}</span></div>
+                        <div className="flex items-center justify-between text-[10px] text-muted-foreground pt-1 border-t">
+                          <span>ICE Candidates: {s.iceCandidatesCount}</span>
+                          <span>Type: {s.connectionType}</span>
+                          <span>Bytes: {(s.bytesTransferred / 1024).toFixed(1)} KB</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* 3. Synchronous RPC Tester */}
               <Card>
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <Server className="w-4 h-4 text-primary" />
-                    Synchronous RPC Call Execution Tester
+                    3. Synchronous Remote Procedure Call (RPC) Framework
                   </CardTitle>
                   <CardDescription className="text-xs">
                     Issue direct RPC request from Order Service to Kitchen / Queue Service endpoints.
@@ -519,12 +675,14 @@ export function DsInspector({ apiBaseUrl = 'http://localhost:3000', isOpen, onCl
             </div>
           )}
 
-          {/* UNIT I: TOPOLOGY */}
+          {/* UNIT I: TOPOLOGY & MULTIMEDIA QoS */}
           {activeTab === 'unit1' && (
-            <div className="space-y-4">
+            <div className="space-y-6">
+
+              {/* 1. Microservices Topology */}
               <Card>
                 <CardHeader>
-                  <CardTitle className="text-base">Microservices Architecture & Container Topology</CardTitle>
+                  <CardTitle className="text-base">1. Microservices Architecture & Container Topology</CardTitle>
                   <CardDescription className="text-xs">
                     Demonstrating virtualization via isolated Docker services orchestrated by Docker Compose.
                   </CardDescription>
@@ -551,6 +709,66 @@ export function DsInspector({ apiBaseUrl = 'http://localhost:3000', isOpen, onCl
                   </div>
                 </CardContent>
               </Card>
+
+              {/* 2. Distributed Multimedia Stream Quality of Service (QoS) */}
+              <Card>
+                <CardHeader className="pb-3">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <CardTitle className="text-base flex items-center gap-2">
+                        <Activity className="w-4 h-4 text-pink-500" />
+                        2. Distributed Multimedia System & Stream Quality of Service (QoS)
+                      </CardTitle>
+                      <CardDescription className="text-xs">
+                        Real-time video monitoring feed with Jitter Buffer, Packet Loss, Latency, and Adaptive Bitrate.
+                      </CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => handleUpdateQoS('1080p_HD', 0.2)}>
+                        Set 1080p HD
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-7 text-[11px]" onClick={() => handleUpdateQoS('720p_SD', 2.0)}>
+                        Simulate Loss (2%)
+                      </Button>
+                      <Button size="sm" variant="destructive" className="h-7 text-[11px]" onClick={() => handleUpdateQoS('480p_LOW', 6.0)}>
+                        Simulate Loss (6%)
+                      </Button>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {snapshot?.multimediaQoS && (
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+                      <div className="p-3 bg-muted/30 border rounded-lg">
+                        <div className="text-muted-foreground text-[10px] uppercase font-semibold">Camera Feed</div>
+                        <div className="font-bold text-sm mt-1">{snapshot.multimediaQoS.cameraName}</div>
+                        <Badge className="mt-2 text-[10px] bg-pink-500">{snapshot.multimediaQoS.resolution}</Badge>
+                      </div>
+
+                      <div className="p-3 bg-muted/30 border rounded-lg">
+                        <div className="text-muted-foreground text-[10px] uppercase font-semibold">Bitrate & FPS</div>
+                        <div className="font-extrabold text-lg text-primary mt-1">{snapshot.multimediaQoS.bitrateKbps} Kbps</div>
+                        <div className="text-[11px] text-muted-foreground">{snapshot.multimediaQoS.frameRateFps} FPS</div>
+                      </div>
+
+                      <div className="p-3 bg-muted/30 border rounded-lg">
+                        <div className="text-muted-foreground text-[10px] uppercase font-semibold">Jitter Buffer & Latency</div>
+                        <div className="font-extrabold text-lg text-amber-500 mt-1">{snapshot.multimediaQoS.jitterBufferMs} ms</div>
+                        <div className="text-[11px] text-muted-foreground">Network Latency: {snapshot.multimediaQoS.networkLatencyMs} ms</div>
+                      </div>
+
+                      <div className="p-3 bg-muted/30 border rounded-lg">
+                        <div className="text-muted-foreground text-[10px] uppercase font-semibold">QoS Health Score</div>
+                        <Badge variant={snapshot.multimediaQoS.streamQualityScore === 'EXCELLENT' ? 'default' : 'destructive'} className="mt-2 text-[11px]">
+                          {snapshot.multimediaQoS.streamQualityScore} ({snapshot.multimediaQoS.packetLossPercentage}% Loss)
+                        </Badge>
+                        <div className="text-[10px] text-muted-foreground mt-1">Frames: {snapshot.multimediaQoS.totalFramesStreamed}</div>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
             </div>
           )}
 

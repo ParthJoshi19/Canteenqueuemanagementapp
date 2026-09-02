@@ -66,6 +66,7 @@ export default function App() {
   const [showQueueDisplay, setShowQueueDisplay] = useState(false);
   const [showEventPreorderDialog, setShowEventPreorderDialog] = useState(false);
   const [showEventOrdersList, setShowEventOrdersList] = useState(false);
+  const [showDsInspector, setShowDsInspector] = useState(false);
 
   // Fetch menu items from backend
   const fetchMenu = useCallback(async () => {

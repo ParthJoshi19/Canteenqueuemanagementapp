@@ -110,9 +110,46 @@ router.post('/rpc/call', async (req: Request, res: Response) => {
   res.json({ success: true, rpcResponse: rpcRes, logs: rpcRegistry.getLogs() });
 });
 
+import { p2pGossipInstance } from '../communication/p2pGossip.js';
+import { webRTCSignalingInstance } from '../communication/webrtcSignaling.js';
+import { multimediaStreamInstance } from '../communication/multimediaStream.js';
+
 // GET /api/ds/eventbus/history - Get pub/sub message history
 router.get('/eventbus/history', (req: Request, res: Response) => {
   res.json({ success: true, history: eventBus.getHistory() });
+});
+
+// POST /api/ds/p2p/gossip/round - Trigger P2P Gossip round
+router.post('/p2p/gossip/round', (req: Request, res: Response) => {
+  const { initiatorId } = req.body;
+  const result = p2pGossipInstance.triggerGossipRound(initiatorId);
+  eventBus.publish("ds.p2p.gossip_round", "p2p-mesh", "all", result);
+  res.json({ success: true, result });
+});
+
+// POST /api/ds/webrtc/signal - Trigger WebRTC SDP/ICE signaling event
+router.post('/webrtc/signal', (req: Request, res: Response) => {
+  const { action, payload } = req.body;
+  const session = webRTCSignalingInstance.handleSignalingEvent(action || 'CREATE_OFFER', payload || {});
+  eventBus.publish("ds.webrtc.signaled", "webrtc-gateway", "all", { action, session });
+  res.json({ success: true, session, logs: webRTCSignalingInstance.getLogs() });
+});
+
+// GET /api/ds/multimedia/stats - Get Multimedia Stream QoS Stats
+router.get('/multimedia/stats', (req: Request, res: Response) => {
+  res.json({ success: true, stats: multimediaStreamInstance.getStats() });
+});
+
+// POST /api/ds/multimedia/qos - Adjust QoS parameters
+router.post('/multimedia/qos', (req: Request, res: Response) => {
+  const { resolution, packetLossPercentage, adaptiveBitrateEnabled } = req.body;
+  const updatedStats = multimediaStreamInstance.updateQoS({
+    resolution,
+    packetLossPercentage: packetLossPercentage !== undefined ? Number(packetLossPercentage) : undefined,
+    adaptiveBitrateEnabled: adaptiveBitrateEnabled !== undefined ? Boolean(adaptiveBitrateEnabled) : undefined
+  });
+  eventBus.publish("ds.multimedia.qos_updated", "multimedia-server", "all", updatedStats);
+  res.json({ success: true, stats: updatedStats });
 });
 
 export default router;

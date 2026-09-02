@@ -9,6 +9,9 @@ import { serviceLamportClocks } from './lamportClock.js';
 import { serviceVectorClocks } from './vectorClock.js';
 import { bullyElectionInstance } from './leaderElection.js';
 import { distributedMutexInstance } from './mutualExclusion.js';
+import { p2pGossipInstance } from '../communication/p2pGossip.js';
+import { webRTCSignalingInstance } from '../communication/webrtcSignaling.js';
+import { multimediaStreamInstance } from '../communication/multimediaStream.js';
 
 export interface DSSnapshot {
   timestamp: string;
@@ -24,6 +27,15 @@ export interface DSSnapshot {
     queue: any[];
     logs: any[];
   };
+  p2pGossip: {
+    nodes: any[];
+    logs: any[];
+  };
+  webRTC: {
+    sessions: any[];
+    logs: any[];
+  };
+  multimediaQoS: any;
 }
 
 export class DSEngine {
@@ -57,7 +69,16 @@ export class DSEngine {
         activeLocks: distributedMutexInstance.getActiveLocks(),
         queue: distributedMutexInstance.getRequestQueue(),
         logs: distributedMutexInstance.getLogs()
-      }
+      },
+      p2pGossip: {
+        nodes: p2pGossipInstance.getNodes(),
+        logs: p2pGossipInstance.getLogs()
+      },
+      webRTC: {
+        sessions: webRTCSignalingInstance.getSessions(),
+        logs: webRTCSignalingInstance.getLogs()
+      },
+      multimediaQoS: multimediaStreamInstance.getStats()
     };
   }
 
