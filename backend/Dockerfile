@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY backend/package*.json ./
 
-RUN npm ci
+RUN npm i
 
 COPY backend/tsconfig.json ./
 COPY backend/src ./src

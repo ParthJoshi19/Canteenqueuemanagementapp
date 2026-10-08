@@ -1,0 +1,35 @@
+groups:
+  - name: canteen-api
+    rules:
+      - alert: CanteenBackendDown
+        expr: up{job="canteen-backend"} == 0
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: Canteen API metrics endpoint is unreachable
+          runbook: Check backend and PostgreSQL containers, then review Grafana logs.
+
+      - alert: CanteenHighServerErrorRate
+        expr: |
+          sum(rate(canteen_http_requests_total{status_code=~"5.."}[5m]))
+          /
+          clamp_min(sum(rate(canteen_http_requests_total[5m])), 0.001) > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: More than 5% of API requests are returning server errors
+          runbook: Inspect recent canteen-backend logs in Grafana and compare error routes.
+
+      - alert: CanteenHighRequestLatency
+        expr: |
+          sum(rate(canteen_http_request_duration_seconds_bucket{le="0.5"}[5m]))
+          /
+          clamp_min(sum(rate(canteen_http_request_duration_seconds_count[5m])), 0.001) < 0.95
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: Fewer than 95% of API requests are completing within 500 ms
+          runbook: Check API latency, database health, and resource saturation in Grafana.

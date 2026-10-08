@@ -1,0 +1,11 @@
+apiVersion: 1
+
+providers:
+  - name: Canteen
+    orgId: 1
+    folder: Canteen
+    type: file
+    disableDeletion: true
+    editable: true
+    options:
+      path: /var/lib/grafana/dashboards

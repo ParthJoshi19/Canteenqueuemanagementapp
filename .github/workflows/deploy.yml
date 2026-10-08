@@ -86,10 +86,11 @@ jobs:
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
         run: |
           set -eu
           missing=0
-          for name in DEPLOY_HOST DEPLOY_USER DEPLOY_SSH_KEY DEPLOY_PATH DB_PASSWORD JWT_SECRET; do
+          for name in DEPLOY_HOST DEPLOY_USER DEPLOY_SSH_KEY DEPLOY_PATH DB_PASSWORD JWT_SECRET GRAFANA_ADMIN_PASSWORD; do
             if [ -z "${!name}" ]; then
               echo "Missing required production environment secret: $name" >&2
               missing=1
@@ -109,22 +110,24 @@ jobs:
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
+          GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
         with:
           host: ${{ secrets.DEPLOY_HOST }}
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
-          envs: DEPLOY_PATH,BACKEND_IMAGE,FRONTEND_IMAGE,GHCR_USER,GHCR_TOKEN,DB_PASSWORD,JWT_SECRET
+          envs: DEPLOY_PATH,BACKEND_IMAGE,FRONTEND_IMAGE,GHCR_USER,GHCR_TOKEN,DB_PASSWORD,JWT_SECRET,GRAFANA_ADMIN_PASSWORD
           script: |
             set -eu
             test -n "$DEPLOY_PATH"
             test -n "$DB_PASSWORD"
             test -n "$JWT_SECRET"
+            test -n "$GRAFANA_ADMIN_PASSWORD"
             cd "$DEPLOY_PATH"
             test -z "$(git status --porcelain)"
             git fetch origin main
             git checkout -B main origin/main
             printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
-            export BACKEND_IMAGE FRONTEND_IMAGE DB_PASSWORD JWT_SECRET
+            export BACKEND_IMAGE FRONTEND_IMAGE DB_PASSWORD JWT_SECRET GRAFANA_ADMIN_PASSWORD
             docker compose pull backend frontend
             docker compose up -d postgres
             for attempt in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
@@ -134,6 +137,12 @@ jobs:
             docker compose exec -T postgres pg_isready -U postgres -d canteen
             docker compose run --rm backend npm run migrate
             docker compose up -d --no-build --no-deps backend frontend
-            docker compose exec -T backend node -e "fetch('http://127.0.0.1:5000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"
+            docker compose --profile observability up -d prometheus grafana loki tempo alloy
+            healthy=0
+            for attempt in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
+              if docker compose exec -T backend node -e "fetch('http://127.0.0.1:5000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"; then healthy=1; break; fi
+              sleep 2
+            done
+            test "$healthy" -eq 1
           timeout: 5m
           command_timeout: 4m

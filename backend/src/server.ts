@@ -1,7 +1,8 @@
 import express from "express";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import { connectDB } from "./config/db.js";
+import { connectDB, query } from "./config/db.js";
+import { httpTelemetryMiddleware, renderPrometheusMetrics } from "./observability/httpTelemetry.js";
 import authRoutes from "./routes/auth.js";
 import menuRoutes from "./routes/menu.js";
 import orderRoutes from "./routes/orders.js";
@@ -38,6 +39,12 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
+// Scraped only by Prometheus inside the Compose network. The host mapping is loopback-only.
+app.get("/metrics", (_req, res) => {
+  res.type("text/plain; version=0.0.4; charset=utf-8").send(renderPrometheusMetrics());
+});
+app.use(httpTelemetryMiddleware);
+
 // Routes
 app.use("/api/auth", authRoutes);
 app.use("/api/menu", menuRoutes);
@@ -48,10 +55,20 @@ app.use("/api/profile", profileRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/ds", dsRoutes);
 
-// Health check
-app.get("/api/health", (_req, res) => {
+// Liveness indicates that the process is running; readiness includes the database dependency.
+app.get("/api/live", (_req, res) => {
   res.json({ status: "ok" });
 });
+const readinessCheck = async (_req: express.Request, res: express.Response) => {
+  try {
+    await query("SELECT 1");
+    res.json({ status: "ok", database: "ok" });
+  } catch {
+    res.status(503).json({ status: "degraded", database: "unavailable" });
+  }
+};
+app.get("/api/health", readinessCheck);
+app.get("/api/ready", readinessCheck);
 
 // Start
 async function start() {
