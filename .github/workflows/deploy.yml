@@ -78,6 +78,27 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
+      - name: Check deployment configuration
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        run: |
+          set -eu
+          missing=0
+          for name in DEPLOY_HOST DEPLOY_USER DEPLOY_SSH_KEY DEPLOY_PATH DB_PASSWORD JWT_SECRET; do
+            if [ -z "${!name}" ]; then
+              echo "Missing required production environment secret: $name" >&2
+              missing=1
+            fi
+          done
+          if [ "$missing" -ne 0 ]; then
+            echo 'Add the missing secrets under Settings > Environments > production.' >&2
+            exit 1
+          fi
       - name: Roll out on deployment host
         uses: appleboy/ssh-action@v1.2.0
         env:

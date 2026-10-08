@@ -9,7 +9,7 @@
 ## One-time setup
 
 1. Add a GitHub Actions environment named `production`.
-2. Add these repository or environment secrets:
+2. Add these secrets to the **production** environment (the deploy job uses that environment):
    - `DEPLOY_HOST`: SSH host for the Docker Compose machine.
    - `DEPLOY_USER`: SSH account that can run Docker Compose.
    - `DEPLOY_SSH_KEY`: private SSH key for that account.
