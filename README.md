@@ -3,6 +3,7 @@
 A full-stack distributed canteen ordering and queue management system built to demonstrate **Distributed Systems Concepts (Units I, II, III, and IV)** alongside a full-featured user experience for students and canteen administrators.
 
 ---
+
 ## 🎯 Why Distributed Systems (DS) Concepts are Needed in this Project
 
 In a real-world university campus, thousands of students rush to the canteen during peak hours (e.g., lunch breaks). A traditional monolithic application backed by a single server and database suffers from catastrophic bottlenecks, single points of failure, uncoordinated state updates, and latency spikes.
