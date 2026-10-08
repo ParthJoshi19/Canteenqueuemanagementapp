@@ -1,0 +1,35 @@
+name: Production health monitor
+
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  health:
+    if: ${{ vars.MONITOR_URL != '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check API health endpoint
+        env:
+          MONITOR_URL: ${{ vars.MONITOR_URL }}
+        run: |
+          set -eu
+          url="${MONITOR_URL%/}/api/health"
+          for attempt in 1 2 3; do
+            if curl --fail --silent --show-error --max-time 15 "$url" | grep -q '"status":"ok"'; then
+              exit 0
+            fi
+            sleep 10
+          done
+          echo "Health check failed for $url" >&2
+          exit 1
+
+  not-configured:
+    if: ${{ vars.MONITOR_URL == '' }}
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo 'Set the repository variable MONITOR_URL to enable production checks.'

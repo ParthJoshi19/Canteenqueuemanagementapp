@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/server.ts",
     "migrate": "tsx src/scripts/migrate.ts",
+    "test": "tsx --test src/ds/algorithms.test.ts",
     "build": "tsc",
     "start": "node dist/server.js",
     "seed": "tsx src/seed/menu-seed.ts",
