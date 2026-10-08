@@ -22,7 +22,7 @@
 4. Add the repository variable `MONITOR_URL` with the public base URL of the deployed app, for example `https://canteen.example.edu` (no `/api/health` suffix).
 5. Enable GitHub Actions and set package visibility/policies so the workflow token can publish and the deployment token can pull the images.
 
-The production deployment expects `DEPLOY_PATH` to point to a clean Git checkout with an `origin` remote and a `main` branch. It fetches the latest `main` before using the Compose file, starts PostgreSQL, waits for readiness, runs backend migrations, restarts the API and frontend, and starts the observability profile. It fails if the checkout has local changes. For an existing PostgreSQL volume, `DB_PASSWORD` must match the password already stored in that database. The current Compose file also contains demo services and development defaults; review those settings before exposing a deployment to the public internet.
+The production deployment expects `DEPLOY_PATH` to point to a clean Git checkout with an `origin` remote and a `main` branch. It fetches the latest `main` before using the Compose file, starts PostgreSQL, waits for readiness, runs backend migrations, restarts the API and frontend, starts the observability profile, and checks the public HTTP page. It fails if the checkout has local changes. For an existing PostgreSQL volume, `DB_PASSWORD` must match the password already stored in that database. The current Compose file also contains demo services and development defaults; review those settings before exposing a deployment to the public internet.
 
 ## Tests
 

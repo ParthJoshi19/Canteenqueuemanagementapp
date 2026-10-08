@@ -138,6 +138,8 @@ jobs:
             docker compose run --rm backend npm run migrate
             docker compose up -d --no-build --no-deps backend frontend
             docker compose --profile observability up -d prometheus grafana loki tempo alloy
+            docker compose exec -T frontend nginx -t
+            docker compose exec -T frontend wget -qO- http://127.0.0.1/ >/dev/null
             healthy=0
             for attempt in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
               if docker compose exec -T backend node -e "fetch('http://127.0.0.1:5000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"; then healthy=1; break; fi
@@ -146,3 +148,18 @@ jobs:
             test "$healthy" -eq 1
           timeout: 5m
           command_timeout: 4m
+      - name: Verify the public website
+        env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+        run: |
+          set -eu
+          url="http://${DEPLOY_HOST}/"
+          for attempt in 1 2 3 4 5 6; do
+            if curl --fail --silent --show-error --max-time 15 "$url" | grep -qi '<html'; then
+              echo "Public frontend is responding at $url"
+              exit 0
+            fi
+            sleep 5
+          done
+          echo "Public frontend check failed for $url. Confirm the EC2 security group and network ACL allow inbound TCP port 80." >&2
+          exit 1
