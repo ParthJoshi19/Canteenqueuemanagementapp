@@ -159,3 +159,13 @@ nodeSelector: {}
 tolerations: []
 
 affinity: {}
+
+backend:
+  image: parthjoshi19/mern-backend:v1
+  replicas: 1
+  port: 5000
+
+frontend:
+  image: parthjoshi19/mern-frontend:v1
+  replicas: 1
+  port: 80
