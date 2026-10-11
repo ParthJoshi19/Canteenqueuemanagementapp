@@ -8,7 +8,6 @@ RUN npm i
 
 COPY backend/tsconfig.json ./
 COPY backend/src ./src
-COPY backend/db ./db
 
 RUN npm run build
 
