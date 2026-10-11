@@ -169,3 +169,4 @@ frontend:
   image: parthjoshi19/mern-frontend:v1
   replicas: 1
   port: 80
+  
