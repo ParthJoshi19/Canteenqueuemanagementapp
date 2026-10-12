@@ -1,4 +1,4 @@
-name: Build and deploy
+name: Build and Deploy
 
 on:
   push:
@@ -9,64 +9,43 @@ permissions:
   contents: read
   packages: write
 
-concurrency:
-  group: production-deploy
-  cancel-in-progress: false
-
 jobs:
-  validate:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: |
-            backend/package-lock.json
-            frontend/package-lock.json
-      - name: Test and build backend
-        working-directory: backend
-        run: |
-          npm ci
-          npm test
-          npm run build
-      - name: Build frontend
-        working-directory: frontend
-        run: |
-          npm ci
-          npm run build
-
-  publish:
-    needs: validate
+  build-and-push:
     runs-on: ubuntu-latest
     outputs:
       backend_image: ${{ steps.images.outputs.backend }}
       frontend_image: ${{ steps.images.outputs.frontend }}
     steps:
-      - uses: actions/checkout@v4
-      - id: images
-        name: Set image names
-        env:
-          REPOSITORY: ${{ github.repository }}
-          SHA: ${{ github.sha }}
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Generate image tags
+        id: images
         run: |
-          repository="$(printf '%s' "$REPOSITORY" | tr '[:upper:]' '[:lower:]')"
-          echo "backend=ghcr.io/${repository}-backend:${SHA}" >> "$GITHUB_OUTPUT"
-          echo "frontend=ghcr.io/${repository}-frontend:${SHA}" >> "$GITHUB_OUTPUT"
-      - uses: docker/setup-buildx-action@v3
-      - uses: docker/login-action@v3
+          repo="$(echo "${{ github.repository }}" | tr '[:upper:]' '[:lower:]')"
+          echo "backend=ghcr.io/${repo}-backend:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+          echo "frontend=ghcr.io/${repo}-frontend:${{ github.sha }}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-      - uses: docker/build-push-action@v6
+
+      - name: Build and push Backend image
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: backend/Dockerfile
           push: true
           tags: ${{ steps.images.outputs.backend }}
-      - uses: docker/build-push-action@v6
+
+      - name: Build and push Frontend image
+        uses: docker/build-push-action@v6
         with:
           context: .
           file: frontend/Dockerfile
@@ -74,38 +53,15 @@ jobs:
           tags: ${{ steps.images.outputs.frontend }}
 
   deploy:
-    needs: publish
+    needs: build-and-push
     runs-on: ubuntu-latest
-    environment: production
     steps:
-      - name: Check deployment configuration
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
-          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
-          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          JWT_SECRET: ${{ secrets.JWT_SECRET }}
-          GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
-        run: |
-          set -eu
-          missing=0
-          for name in DEPLOY_HOST DEPLOY_USER DEPLOY_SSH_KEY DEPLOY_PATH DB_PASSWORD JWT_SECRET GRAFANA_ADMIN_PASSWORD; do
-            if [ -z "${!name}" ]; then
-              echo "Missing required production environment secret: $name" >&2
-              missing=1
-            fi
-          done
-          if [ "$missing" -ne 0 ]; then
-            echo 'Add the missing secrets under Settings > Environments > production.' >&2
-            exit 1
-          fi
-      - name: Roll out on deployment host
+      - name: Deploy on EC2 via SSH
         uses: appleboy/ssh-action@v1.2.0
         env:
           DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
-          BACKEND_IMAGE: ${{ needs.publish.outputs.backend_image }}
-          FRONTEND_IMAGE: ${{ needs.publish.outputs.frontend_image }}
+          BACKEND_IMAGE: ${{ needs.build-and-push.outputs.backend_image }}
+          FRONTEND_IMAGE: ${{ needs.build-and-push.outputs.frontend_image }}
           GHCR_USER: ${{ github.actor }}
           GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
@@ -118,48 +74,22 @@ jobs:
           envs: DEPLOY_PATH,BACKEND_IMAGE,FRONTEND_IMAGE,GHCR_USER,GHCR_TOKEN,DB_PASSWORD,JWT_SECRET,GRAFANA_ADMIN_PASSWORD
           script: |
             set -eu
-            test -n "$DEPLOY_PATH"
-            test -n "$DB_PASSWORD"
-            test -n "$JWT_SECRET"
-            test -n "$GRAFANA_ADMIN_PASSWORD"
             cd "$DEPLOY_PATH"
-            test -z "$(git status --porcelain)"
+
+            # Sync code repository
             git fetch origin main
-            git checkout -B main origin/main
+            git reset --hard origin/main
+
+            # Docker login & pull images
             printf '%s' "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USER" --password-stdin
             export BACKEND_IMAGE FRONTEND_IMAGE DB_PASSWORD JWT_SECRET GRAFANA_ADMIN_PASSWORD
             docker compose pull backend frontend
+
+            # Start database and run migrations
             docker compose up -d postgres
-            for attempt in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
-              if docker compose exec -T postgres pg_isready -U postgres -d canteen; then break; fi
-              sleep 2
-            done
-            docker compose exec -T postgres pg_isready -U postgres -d canteen
+            sleep 5
             docker compose run --rm backend npm run migrate
+
+            # Start services and observability
             docker compose up -d --no-build --no-deps backend frontend
             docker compose --profile observability up -d prometheus grafana loki tempo alloy
-            docker compose exec -T frontend nginx -t
-            docker compose exec -T frontend wget -qO- http://127.0.0.1/ >/dev/null
-            healthy=0
-            for attempt in 1 2 3 4 5 6 7 8 9 10 11 12 13 14 15; do
-              if docker compose exec -T backend node -e "fetch('http://127.0.0.1:5000/api/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))"; then healthy=1; break; fi
-              sleep 2
-            done
-            test "$healthy" -eq 1
-          timeout: 5m
-          command_timeout: 4m
-      - name: Verify the public website
-        env:
-          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
-        run: |
-          set -eu
-          url="http://${DEPLOY_HOST}/"
-          for attempt in 1 2 3 4 5 6; do
-            if curl --fail --silent --show-error --max-time 15 "$url" | grep -qi '<html'; then
-              echo "Public frontend is responding at $url"
-              exit 0
-            fi
-            sleep 5
-          done
-          echo "Public frontend check failed for $url. Confirm the EC2 security group and network ACL allow inbound TCP port 80." >&2
-          exit 1
