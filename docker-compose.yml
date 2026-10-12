@@ -99,7 +99,7 @@ services:
       TRACE_EXPORT_URL: http://alloy:9411/api/v2/spans
       OTEL_SERVICE_NAME: canteen-backend
     ports:
-      - "5000:5000"
+      - "127.0.0.1:5000:5000"
     depends_on:
       - postgres
 
