@@ -12,6 +12,7 @@ permissions:
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
+    environment: production
     outputs:
       backend_image: ${{ steps.images.outputs.backend }}
       frontend_image: ${{ steps.images.outputs.frontend }}
@@ -54,6 +55,7 @@ jobs:
 
   deploy:
     needs: build-and-push
+    environment: production
     runs-on: ubuntu-latest
     steps:
       - name: Deploy on EC2 via SSH
