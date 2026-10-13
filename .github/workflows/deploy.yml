@@ -55,6 +55,5 @@ jobs:
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker compose pull backend frontend
             docker compose up -d postgres
-            sleep 3
             docker compose run -T --rm backend npm run migrate
-            docker compose --profile observability up -d backend frontend prometheus grafana loki tempo alloy
+            docker compose up -d --profile observability backend frontend prometheus grafana loki tempo alloy
