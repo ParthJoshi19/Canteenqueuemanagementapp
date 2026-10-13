@@ -46,13 +46,15 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           envs: BACKEND_IMAGE,FRONTEND_IMAGE,DB_PASSWORD,JWT_SECRET,GRAFANA_ADMIN_PASSWORD
+          timeout: 45s
+          debug: true
           script: |
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
-            git pull origin main
+            GIT_TERMINAL_PROMPT=0 git pull origin main
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
             docker compose pull backend frontend
             docker compose up -d postgres
             sleep 3
-            docker compose run --rm backend npm run migrate
+            docker compose run -T --rm backend npm run migrate
             docker compose --profile observability up -d backend frontend prometheus grafana loki tempo alloy
