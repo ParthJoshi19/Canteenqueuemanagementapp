@@ -314,7 +314,6 @@ npm run dev
 | `GET` | `/api/ready` | Database connection readiness probe |
 | `GET` | `/api/health` | Comprehensive application health status |
 | `GET` | `/metrics` | Prometheus metrics export endpoint |
-
 ---
 
 ## 📊 Monitoring, Observability & SRE (Grafana, Prometheus, Loki, Tempo)
