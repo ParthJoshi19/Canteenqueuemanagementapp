@@ -12,12 +12,6 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
-  redis:
-    image: redis:7-alpine
-    container_name: canteen-redis
-    restart: always
-    ports:
-      - "6379:6379"
 
   queue-service:
     build:
@@ -27,11 +21,8 @@ services:
     environment:
       PORT: 3002
       SERVICE_NAME: queue-service
-      REDIS_URL: redis://redis:6379
     ports:
       - "3002:3002"
-    depends_on:
-      - redis
 
   kitchen-service:
     build:
@@ -41,11 +32,8 @@ services:
     environment:
       PORT: 3003
       SERVICE_NAME: kitchen-service
-      REDIS_URL: redis://redis:6379
     ports:
       - "3003:3003"
-    depends_on:
-      - redis
 
   notification-service:
     build:
@@ -55,11 +43,8 @@ services:
     environment:
       PORT: 3004
       SERVICE_NAME: notification-service
-      REDIS_URL: redis://redis:6379
     ports:
       - "3004:3004"
-    depends_on:
-      - redis
 
   backend:
     image: ${BACKEND_IMAGE:-canteen-backend:local}
