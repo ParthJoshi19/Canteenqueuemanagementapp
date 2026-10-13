@@ -46,7 +46,6 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           envs: BACKEND_IMAGE,FRONTEND_IMAGE,DB_PASSWORD,JWT_SECRET,GRAFANA_ADMIN_PASSWORD
-          command_timeout: 30m
           script: |
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
