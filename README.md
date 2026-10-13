@@ -247,6 +247,7 @@ npm run dev
 # Running on http://localhost:5000
 ```
 
+
 ```bash
 # Terminal 2 - Frontend Application
 cd frontend
