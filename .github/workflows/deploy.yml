@@ -34,6 +34,7 @@ jobs:
           docker push "$REPO-frontend:${{ github.sha }}"
 
       
+      
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1.2.0
         timeout-minutes: 15
@@ -50,17 +51,43 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           timeout: 30s
-          command_timeout: 20m
+          command_timeout: 30m
           envs: BACKEND_IMAGE,FRONTEND_IMAGE,DB_PASSWORD,JWT_SECRET,GRAFANA_ADMIN_PASSWORD,GHCR_USERNAME,GHCR_TOKEN
           script: |
             set -eu
+
+            echo "STEP 1: SSH connected"
             cd "${{ secrets.DEPLOY_PATH }}"
+            echo "STEP 2: Deployment directory: $(pwd)"
+
+            echo "STEP 3: Checking Git status"
             git status --short
+
+            echo "STEP 4: Pulling latest code"
             timeout 120 git pull --ff-only origin main
+            echo "STEP 5: Git pull completed"
+
+            echo "STEP 6: Logging in to GHCR"
             printf '%s' "$GHCR_TOKEN" | docker login ghcr.io \
               -u "$GHCR_USERNAME" --password-stdin
+            echo "STEP 7: GHCR login completed"
+
+            echo "STEP 8: Checking Docker Compose"
             docker compose config -q
+            echo "STEP 9: Compose configuration valid"
+
+            echo "STEP 10: Pulling backend and frontend"
             docker compose pull backend frontend
+            echo "STEP 11: Image pull completed"
+
+            echo "STEP 12: Starting containers"
             docker compose up -d backend frontend
+            echo "STEP 13: Containers started"
+
+            echo "STEP 14: Container status"
             docker compose ps
+
+            echo "STEP 15: Cleaning unused images"
             docker image prune -f
+
+            echo "DEPLOYMENT COMPLETED"
