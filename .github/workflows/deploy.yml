@@ -50,7 +50,7 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           timeout: 30s
-          command_timeout: 10m
+          command_timeout: 20m
           envs: BACKEND_IMAGE,FRONTEND_IMAGE,DB_PASSWORD,JWT_SECRET,GRAFANA_ADMIN_PASSWORD,GHCR_USERNAME,GHCR_TOKEN
           script: |
             set -eu
