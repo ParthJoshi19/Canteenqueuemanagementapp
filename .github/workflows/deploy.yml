@@ -46,6 +46,7 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           envs: BACKEND_IMAGE,FRONTEND_IMAGE,DB_PASSWORD,JWT_SECRET,GRAFANA_ADMIN_PASSWORD
+          command_timeout: 30m
           script: |
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
@@ -54,4 +55,5 @@ jobs:
             docker compose pull backend frontend
             docker compose up -d postgres
             docker compose run -T --rm backend npm run migrate
-            docker compose up -d --profile observability backend frontend prometheus grafana loki tempo alloy
+            docker compose --profile observability up -d backend frontend prometheus grafana loki tempo alloy
+            docker image prune -f
