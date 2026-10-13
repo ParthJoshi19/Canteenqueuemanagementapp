@@ -438,7 +438,6 @@ Canteenqueuemanagementapp/
 ├── CI_CD.md                   # Detailed CI/CD workflow documentation
 └── README.md                  # Project documentation
 ```
-
 ---
 
 ## 📄 License
