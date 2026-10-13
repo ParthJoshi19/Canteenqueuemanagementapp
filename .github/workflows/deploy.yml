@@ -84,10 +84,4 @@ jobs:
             docker compose up -d backend frontend
             echo "STEP 13: Containers started"
 
-            echo "STEP 14: Container status"
-            docker compose ps
-
-            echo "STEP 15: Cleaning unused images"
-            docker image prune -f
-
             echo "DEPLOYMENT COMPLETED"
