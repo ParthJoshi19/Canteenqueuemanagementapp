@@ -50,7 +50,7 @@ export function Header({
                 <UtensilsCrossed className="w-6 h-6 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-xl font-bold tracking-tight">Campus Cantee</h1>
+                <h1 className="text-xl font-bold tracking-tight">Campus Canteen</h1>
                 <p className="text-sm text-muted-foreground">Order ahead, skip the queue</p>
               </div>
             </div>
