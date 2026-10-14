@@ -63,7 +63,6 @@ services:
       DB_PASSWORD: ${DB_PASSWORD:-postgrespassword}
       DB_SSL: "false"
       JWT_SECRET: ${JWT_SECRET:-change-this-to-a-strong-random-secret}
-      TRACE_EXPORT_URL: http://alloy:9411/api/v2/spans
       OTEL_SERVICE_NAME: canteen-backend
     ports:
       - "127.0.0.1:5000:5000"
@@ -137,26 +136,9 @@ services:
       - ./observability/tempo/tempo.yml:/etc/tempo/tempo.yml:ro
       - tempodata:/var/tempo
 
-  alloy:
-    image: grafana/alloy:v1.10.2
-    profiles: [observability]
-    restart: unless-stopped
-    command:
-      - run
-      - --storage.path=/var/lib/alloy/data
-      - /etc/alloy/config.alloy
-    volumes:
-      - ./observability/alloy/config.alloy:/etc/alloy/config.alloy:ro
-      - alloydata:/var/lib/alloy/data
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-    depends_on:
-      - loki
-      - tempo
-
 volumes:
   pgdata:
   prometheusdata:
   grafanadata:
   lokidata:
   tempodata:
-  alloydata:
