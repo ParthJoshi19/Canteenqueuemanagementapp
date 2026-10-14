@@ -29,7 +29,6 @@ jobs:
           envs: DB_PASSWORD,JWT_SECRET,GRAFANA_ADMIN_PASSWORD
           script: |
             set -eu
-
             echo "STEP 1: SSH connected"
             cd "${{ secrets.DEPLOY_PATH }}"
             echo "STEP 2: Deployment directory: $(pwd)"
