@@ -13,25 +13,30 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
+      - name: Setup SSH Agent
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_SSH_KEY }}
+
       - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.2.0
-        timeout-minutes: 15
         env:
+          DEPLOY_HOST: ${{ secrets.DEPLOY_HOST }}
+          DEPLOY_USER: ${{ secrets.DEPLOY_USER }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
           DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
-        with:
-          host: ${{ secrets.DEPLOY_HOST }}
-          username: ${{ secrets.DEPLOY_USER }}
-          key: ${{ secrets.DEPLOY_SSH_KEY }}
-          timeout: 30s
-          command_timeout: 30m
-          envs: DB_PASSWORD,JWT_SECRET,GRAFANA_ADMIN_PASSWORD
-          script: |
+        run: |
+          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 "${DEPLOY_USER}@${DEPLOY_HOST}" \
+            "DEPLOY_PATH=$(printf '%q' "$DEPLOY_PATH") \
+             DB_PASSWORD=$(printf '%q' "$DB_PASSWORD") \
+             JWT_SECRET=$(printf '%q' "$JWT_SECRET") \
+             GRAFANA_ADMIN_PASSWORD=$(printf '%q' "$GRAFANA_ADMIN_PASSWORD") \
+             bash -s" << 'EOF'
             set -eu
 
             echo "STEP 1: SSH connected"
-            cd "${{ secrets.DEPLOY_PATH }}"
+            cd "$DEPLOY_PATH"
             echo "STEP 2: Deployment directory: $(pwd)"
 
             echo "STEP 3: Checking Git status"
@@ -46,10 +51,9 @@ jobs:
             echo "STEP 7: Compose configuration valid"
 
             echo "STEP 8: Building and starting containers"
+            export DB_PASSWORD JWT_SECRET GRAFANA_ADMIN_PASSWORD
             docker compose up -d --build backend frontend
             echo "STEP 9: Containers started"
 
-            echo "STEP 10: Pruning unused images"
-            docker image prune -f
-
             echo "DEPLOYMENT COMPLETED"
+          EOF
