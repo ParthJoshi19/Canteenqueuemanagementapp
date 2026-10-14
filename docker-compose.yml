@@ -47,7 +47,7 @@ services:
       - "3004:3004"
 
   backend:
-    image: ${BACKEND_IMAGE:-canteen-backend:local}
+    image: ${BACKEND_IMAGE:-canteen-backend:latest}
     build:
       context: .
       dockerfile: backend/Dockerfile
@@ -71,7 +71,7 @@ services:
       - postgres
 
   frontend:
-    image: ${FRONTEND_IMAGE:-canteen-frontend:local}
+    image: ${FRONTEND_IMAGE:-canteen-frontend:latest}
     build:
       context: .
       dockerfile: frontend/Dockerfile
