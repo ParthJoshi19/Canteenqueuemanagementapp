@@ -27,7 +27,11 @@ jobs:
           JWT_SECRET: ${{ secrets.JWT_SECRET }}
           GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
         run: |
-          ssh -o StrictHostKeyChecking=no -o ConnectTimeout=30 "${DEPLOY_USER}@${DEPLOY_HOST}" \
+          ssh -o StrictHostKeyChecking=no \
+              -o ConnectTimeout=30 \
+              -o ServerAliveInterval=30 \
+              -o ServerAliveCountMax=5 \
+              "${DEPLOY_USER}@${DEPLOY_HOST}" \
             "DEPLOY_PATH=$(printf '%q' "$DEPLOY_PATH") \
              DB_PASSWORD=$(printf '%q' "$DB_PASSWORD") \
              JWT_SECRET=$(printf '%q' "$JWT_SECRET") \
@@ -38,6 +42,8 @@ jobs:
             echo "STEP 1: SSH connected"
             cd "$DEPLOY_PATH"
             echo "STEP 2: Deployment directory: $(pwd)"
+
+            export DB_PASSWORD JWT_SECRET GRAFANA_ADMIN_PASSWORD
 
             echo "STEP 3: Checking Git status"
             git status --short
@@ -51,7 +57,6 @@ jobs:
             echo "STEP 7: Compose configuration valid"
 
             echo "STEP 8: Building and starting containers"
-            export DB_PASSWORD JWT_SECRET GRAFANA_ADMIN_PASSWORD
             docker compose up -d --build backend frontend
             echo "STEP 9: Containers started"
 
