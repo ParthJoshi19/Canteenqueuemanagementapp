@@ -7,6 +7,7 @@
 - **Production health monitor** checks `/api/health` every 10 minutes and on demand. A failed check fails the workflow and is visible in GitHub Actions; configure GitHub notifications for workflow failures to receive alerts.
 - **Monitoring and SRE**: see [`observability/OPERATIONS.md`](observability/OPERATIONS.md) for Grafana, Prometheus, Loki, Tempo, SLOs, incident response, and postmortems.
 
+
 ## One-time setup
 
 1. Add a GitHub Actions environment named `production`.
