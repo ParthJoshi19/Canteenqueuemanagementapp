@@ -41,12 +41,8 @@ jobs:
             timeout 120 git pull --ff-only origin main
             echo "STEP 5: Git pull completed"
 
-            echo "STEP 6: Checking Docker Compose"
-            docker compose config -q
-            echo "STEP 7: Compose configuration valid"
-
-            echo "STEP 8: Building and starting containers"
+            echo "STEP 6: Building and starting containers"
             docker compose up -d --build backend frontend
-            echo "STEP 9: Containers started"
+            echo "STEP 7: Containers started"
 
             echo "DEPLOYMENT COMPLETED"
